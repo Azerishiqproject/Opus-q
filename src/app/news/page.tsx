@@ -39,7 +39,7 @@ export default function News() {
       title: "Ethereum's Shanghai Upgrade Set to Transform the Network",
       content: "Ethereum's upcoming Shanghai upgrade is expected to bring significant changes to the network, including enabling staked ETH withdrawals. This long-awaited feature will allow validators to access their staked ETH and rewards, potentially increasing participation in Ethereum's proof-of-stake consensus mechanism.",
       image: "/ethereum-news.jpg",
-      author: "Hasan Güzeller",
+      author: "Hasan Talha Güzeller",
       date: "June 2, 2023",
       category: "Ethereum",
       readTime: "4 min read"
@@ -49,7 +49,7 @@ export default function News() {
       title: "Regulatory Clarity Emerges for Cryptocurrencies in Europe",
       content: "European regulators have introduced a new framework for cryptocurrency regulation, providing much-needed clarity for businesses and investors. The new rules establish guidelines for crypto asset service providers and aim to protect consumers while fostering innovation in the blockchain space.",
       image: "/regulation-news.jpg",
-      author: "Efe Turgut",
+      author: "ümid Rzayev ",
       date: "June 5, 2023",
       category: "Regulation",
       readTime: "5 min read"
@@ -59,7 +59,7 @@ export default function News() {
       title: "DeFi Projects See Surge in Total Value Locked",
       content: "Decentralized finance (DeFi) protocols have experienced a significant increase in total value locked (TVL) over the past month. This growth suggests renewed confidence in the DeFi sector, with investors seeking alternatives to traditional financial services amidst global banking concerns.",
       image: "/defi-news.jpg",
-      author: "Hasan Güzeller",
+      author: "Ege Yavuz ",
       date: "June 8, 2023",
       category: "DeFi",
       readTime: "3 min read"
@@ -69,7 +69,7 @@ export default function News() {
       title: "NFT Market Shows Signs of Recovery After Year-Long Slump",
       content: "The non-fungible token (NFT) market is showing signs of recovery after a prolonged downturn. Trading volumes have increased, and new projects are attracting attention. Experts attribute this revival to innovations in utility-focused NFTs and increased integration with gaming and metaverse platforms.",
       image: "/nft-news.jpg",
-      author: "Efe Turgut",
+      author: "Yılmaz Coşkun",
       date: "June 12, 2023",
       category: "NFTs",
       readTime: "4 min read"
@@ -79,7 +79,7 @@ export default function News() {
       title: "Central Banks Accelerate CBDC Development Worldwide",
       content: "Central banks around the world are accelerating their research and development of Central Bank Digital Currencies (CBDCs). This trend reflects growing recognition of the importance of digital assets in the future of finance, with several major economies planning pilot programs in the coming months.",
       image: "/cbdc-news.jpg",
-      author: "Hasan Güzeller",
+      author: "Leonardo da Vinci",
       date: "June 15, 2023",
       category: "CBDCs",
       readTime: "5 min read"

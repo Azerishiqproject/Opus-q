@@ -1,13 +1,30 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useGetCoinPriceHistoryQuery } from '@/redux/services/coinApi';
+import { useEffect, useRef, useState } from 'react';
 
 interface CryptoChartProps {
   symbol: string;
   timeRange: string;
   darkMode?: boolean;
+  priority?: boolean;
 }
+
+interface PriceData {
+  prices: [number, number][];
+  market_caps: [number, number][];
+  total_volumes: [number, number][];
+}
+
+interface CacheData {
+  data: PriceData;
+  timestamp: number;
+}
+
+// Global cache for storing price data to reduce API calls
+const priceCache: Record<string, CacheData> = {};
+
+// Cache validity duration in milliseconds (5 minutes)
+const CACHE_DURATION = 5 * 60 * 1000;
 
 // Zaman aralığını gün sayısına çevirme fonksiyonu
 const timeRangeToDay = (timeRange: string): number | string => {
@@ -25,16 +42,79 @@ const timeRangeToDay = (timeRange: string): number | string => {
   }
 };
 
-export default function CryptoChart({ symbol, timeRange, darkMode = false }: CryptoChartProps) {
+// X ekseni zaman etiketleri için interval hesaplama
+const getTimeIntervalForRange = (timeRange: string, timestamp: Date): string => {
+  switch (timeRange) {
+    case '1h':
+      return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    case '3h':
+      return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    case '1d':
+      return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    case '1w':
+      return timestamp.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    case '1m':
+      return timestamp.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    default:
+      return timestamp.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }
+};
+
+export default function CryptoChart({ symbol, timeRange, darkMode = false, priority = false }: CryptoChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [priceData, setPriceData] = useState<PriceData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   
   // API'dan fiyat geçmişi verilerini çekme
   const days = timeRangeToDay(timeRange);
-  const { data: priceData, isLoading, error } = useGetCoinPriceHistoryQuery({ 
-    id: symbol, 
-    days 
-  });
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      
+      const cacheKey = `${symbol}_${days}`;
+      const cachedData = priceCache[cacheKey];
+      
+      if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
+        // Use cached data
+        setPriceData(cachedData.data);
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        // If this chart is not priority, add a small delay to avoid rate limiting
+        if (!priority) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        const response = await fetch(`https://api.coingecko.com/api/v3/coins/${symbol}/market_chart?vs_currency=usd&days=${days}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        const data = await response.json() as PriceData;
+        
+        // Update the cache
+        priceCache[cacheKey] = {
+          data,
+          timestamp: Date.now()
+        };
+        
+        setPriceData(data);
+        setIsLoading(false);
+      } catch (err) {
+        console.error(`Error fetching chart data for ${symbol}:`, err);
+        setError(err instanceof Error ? err : new Error('Unknown error'));
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [symbol, days, priority]);
 
   useEffect(() => {
     if (!containerRef.current || !canvasRef.current || !priceData || !priceData.prices) return;
@@ -142,15 +222,8 @@ export default function CryptoChart({ symbol, timeRange, darkMode = false }: Cry
       const x = margin.left + (i / (timestamps.length - 1)) * graphWidth;
       const timestamp = timestamps[i];
       
-      // Etiketi formatla
-      let label;
-      if (timeRange === '1h' || timeRange === '3h') {
-        label = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      } else if (timeRange === '1d') {
-        label = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      } else {
-        label = timestamp.toLocaleDateString([], { month: 'short', day: 'numeric' });
-      }
+      // Format label according to time range
+      const label = getTimeIntervalForRange(timeRange, timestamp);
       
       ctx.fillText(label, x, height - 10);
     }

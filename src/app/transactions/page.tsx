@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { HiBell } from 'react-icons/hi';
 import { FaBitcoin, FaEthereum } from 'react-icons/fa';
 import { SiLitecoin, SiSolana, SiBinance, SiRipple, SiCardano, SiPolkadot } from 'react-icons/si';
@@ -9,6 +9,9 @@ import { IoIosArrowDown } from 'react-icons/io';
 import { FaWallet } from 'react-icons/fa6';
 import { useGetCoinsQuery } from '@/redux/services/coinApi';
 import { IconType } from 'react-icons';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchUserPortfolio } from '@/redux/slices/portfolioSlice';
+import { RootState, AppDispatch } from '@/redux/store';
 
 // Define interfaces for our data structures
 interface CoinData {
@@ -18,16 +21,6 @@ interface CoinData {
   price_change_percentage_24h: number;
 }
 
-interface PortfolioItem {
-  name: string;
-  icon: IconType | React.ReactNode;
-  bgColor: string;
-  price: string;
-  change: string;
-  amount: string;
-  symbol: string;
-  trend: 'up' | 'down';
-}
 
 interface AllocationItem {
   coin: string;
@@ -54,6 +47,42 @@ interface TransactionItem {
   locked: string;
   amount: string;
 }
+
+// Video Loading Overlay Component
+const VideoLoadingOverlay = ({ isVisible, onFinished }: { isVisible: boolean, onFinished: () => void }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (isVisible && videoRef.current) {
+      videoRef.current.play();
+      
+      // Optional: Add an event listener to handle when the video ends
+      videoRef.current.onended = () => {
+        onFinished();
+      };
+      
+      // If you want to keep the loading animation for a minimum time even if video is short
+      // const timer = setTimeout(onFinished, 2000);
+      // return () => clearTimeout(timer);
+    }
+  }, [isVisible, onFinished]);
+
+  if (!isVisible) return null;
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-50 bg-[#1F2431] bg-opacity-90">
+      <div className="relative w-64 h-64">
+        <video 
+          ref={videoRef}
+          className="w-full h-full object-cover"
+          src="/0407(1).mov" 
+          muted 
+          playsInline
+        />
+      </div>
+    </div>
+  );
+};
 
 // Coin icon helper fonksiyonu
 const getCoinIcon = (symbol: string): IconType | React.ReactNode => {
@@ -108,6 +137,10 @@ const getCoinColor = (symbol: string): string => {
 
 const Transactions = () => {
   
+  // Redux state and dispatch
+  const dispatch = useDispatch<AppDispatch>();
+  const { items: portfolioItems, status: portfolioStatus, error: portfolioError } = useSelector((state: RootState) => state.portfolio);
+  
   // Coin Allocation state'leri
   const [allocationMonth, setAllocationMonth] = useState('Month');
   const [showAllocationMonthDropdown, setShowAllocationMonthDropdown] = useState(false);
@@ -127,6 +160,15 @@ const Transactions = () => {
   });
   const [showCryptoDropdown, setShowCryptoDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
+  const [activeExchangeTab, setActiveExchangeTab] = useState('exchange');
+  const [isExchangeLoading, setIsExchangeLoading] = useState(false);
+  const [showVideoOverlay, setShowVideoOverlay] = useState(false);
+  
+  // Buy/Sell Coin states
+  const [tradeType, setTradeType] = useState('buy');
+  const [tradeAmount, setTradeAmount] = useState('');
+  const [selectedCoin, setSelectedCoin] = useState('BTC');
+  const [showTradeDropdown, setShowTradeDropdown] = useState(false);
   
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'TRY'];
@@ -139,32 +181,16 @@ const Transactions = () => {
   const [coinAllocationData, setCoinAllocationData] = useState<AllocationItem[]>([]);
   const [transactionHistoryData, setTransactionHistoryData] = useState<TransactionItem[]>([]);
   
-  // My Portfolio bölümünü API'den gelen verilerle değiştir
-  // Önce state oluştur
-  const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([]);
+  // Fetch portfolio data when component mounts
+  useEffect(() => {
+    dispatch(fetchUserPortfolio());
+  }, [dispatch]);
   
-  // useEffect içinde portfolio verilerini de oluştur
+  // Replace the portfolioItems state setting with useEffect that depends on the coins
   useEffect(() => {
     if (coins && coins.length > 0) {
-      // Portfolio items verilerini oluştur (sadece bir kez)
-      const portfolio = coins.slice(0, 5).map(coin => {
-        const randomAmount = (Math.random() * 2 + 0.1).toFixed(4);
-        const priceChangePercent = coin.price_change_percentage_24h;
-        const trend: 'up' | 'down' = priceChangePercent >= 0 ? 'up' : 'down';
-        
-        return {
-          name: coin.name,
-          icon: getCoinIcon(coin.symbol),
-          bgColor: getCoinColor(coin.symbol),
-          price: `$${coin.current_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-          change: `${trend === 'up' ? '+' : ''}${priceChangePercent.toFixed(2)}%`,
-          amount: randomAmount,
-          symbol: coin.symbol.toUpperCase(),
-          trend
-        };
-      });
-      
-      setPortfolioItems(portfolio);
+      // We no longer need to set portfolio items as they're coming from Redux
+      // Existing code for allocation and history data remains the same
       
       // Sayfa sayısını hesapla
       // Her sayfada 4 öğe olacak şekilde
@@ -335,15 +361,6 @@ const Transactions = () => {
     setShowCurrencyDropdown(false);
   };
 
-  const handleExchange = () => {
-    // Simple implementation that just logs the exchange
-    console.log(`Exchanging ${exchangeCoin.from.amount} ${exchangeCoin.from.symbol} to ${exchangeCoin.to.symbol}`);
-    
-    // Here you would typically call an API or perform actual exchange logic
-    // But for now we'll just show an alert
-    alert(`Exchange successful: ${exchangeCoin.from.amount} ${exchangeCoin.from.symbol} → ${exchangeCoin.to.amount} ${exchangeCoin.to.symbol}`);
-  };
-
   const handleSwapCurrencies = () => {
     setExchangeCoin(prev => ({
       from: { ...prev.to, amount: prev.to.amount },
@@ -351,8 +368,113 @@ const Transactions = () => {
     }));
   };
 
+  const handleExchange = () => {
+    console.log(`Exchanging ${exchangeCoin.from.amount} ${exchangeCoin.from.symbol} to ${exchangeCoin.to.symbol}`);
+    
+    // Show loading state and video overlay
+    setIsExchangeLoading(true);
+    setShowVideoOverlay(true);
+    
+    // Simulate API call with timeout
+    setTimeout(() => {
+      setIsExchangeLoading(false);
+      // Don't hide video overlay here, let the video finish or manual close
+      alert(`Exchange successful: ${exchangeCoin.from.amount} ${exchangeCoin.from.symbol} → ${exchangeCoin.to.amount} ${exchangeCoin.to.symbol}`);
+    }, 2000);
+  };
+
+  // Handlers for Buy/Sell functionality
+  const handleTradeTypeChange = (type: 'buy' | 'sell') => {
+    setTradeType(type);
+  };
+
+  const handleCoinSelect = (coin: string) => {
+    setSelectedCoin(coin);
+    setShowTradeDropdown(false);
+  };
+
+  const handleTradeAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Allow only numbers and one decimal point
+    const value = e.target.value;
+    if (/^\d*\.?\d*$/.test(value)) {
+      setTradeAmount(value);
+    }
+  };
+
+  const handleTrade = () => {
+    if (!tradeAmount || parseFloat(tradeAmount) <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+
+    // Show loading state and video overlay
+    setIsExchangeLoading(true);
+    setShowVideoOverlay(true);
+
+    // Simulate API call with timeout
+    setTimeout(() => {
+      setIsExchangeLoading(false);
+      // Don't hide video overlay here, let the video finish or manual close
+      
+      // Get current price from coins data
+      const coinData = coins?.find(coin => coin.symbol.toUpperCase() === selectedCoin);
+      const price = coinData?.current_price || 0;
+      const total = (parseFloat(tradeAmount) * price).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+      
+      alert(`${tradeType === 'buy' ? 'Bought' : 'Sold'} ${tradeAmount} ${selectedCoin} for $${total}`);
+      setTradeAmount('');
+    }, 2000);
+  };
+
+  // Handler for when video finishes
+  const handleVideoFinished = () => {
+    setShowVideoOverlay(false);
+  };
+
+  // Get coin price in USD
+  const getCoinPrice = (symbol: string) => {
+    const coin = coins?.find(c => c.symbol.toUpperCase() === symbol);
+    return coin ? coin.current_price.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }) : '0.00';
+  };
+
+  // Get coin icon color
+  const getCoinIconForExchange = (symbol: string) => {
+    switch(symbol.toUpperCase()) {
+      case 'BTC':
+        return <FaBitcoin className="text-white" size={12} />;
+      case 'ETH':
+        return <FaEthereum className="text-white" size={12} />;
+      case 'LTC':
+        return <SiLitecoin className="text-white" size={12} />;
+      case 'SOL':
+        return <SiSolana className="text-white" size={12} />;
+      case 'BNB':
+        return <SiBinance className="text-white" size={12} />;
+      case 'XRP':
+        return <SiRipple className="text-white" size={12} />;
+      case 'ADA':
+        return <SiCardano className="text-white" size={12} />;
+      case 'DOT':
+        return <SiPolkadot className="text-white" size={12} />;
+      default:
+        return <span className="text-white text-xs">{symbol.charAt(0)}</span>;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#21232d]">
+      {/* Video Overlay */}
+      <VideoLoadingOverlay 
+        isVisible={showVideoOverlay}
+        onFinished={handleVideoFinished}
+      />
+      
       {/* Header */}
       <header className="bg-[#21232d] p-5 flex items-center justify-between border-b border-[#272b3b]">
         <div className="flex items-center">
@@ -707,135 +829,266 @@ const Transactions = () => {
               {/* Exchange Coin Tabs */}
               <div className="flex text-sm mb-5 border-b border-gray-700">
                 <button 
-                  className="mr-6 py-2 text-blue-500 border-b-2 border-blue-500 font-medium"
+                  className={`mr-6 py-2 ${activeExchangeTab === 'exchange' 
+                    ? 'text-blue-500 border-b-2 border-blue-500 font-medium' 
+                    : 'text-gray-400'}`}
+                  onClick={() => setActiveExchangeTab('exchange')}
                 >
                   Exchange Coin
                 </button>
                 <button 
-                  className="mr-6 py-2 text-gray-400"
+                  className={`mr-6 py-2 ${activeExchangeTab === 'trade' 
+                    ? 'text-blue-500 border-b-2 border-blue-500 font-medium' 
+                    : 'text-gray-400'}`}
+                  onClick={() => setActiveExchangeTab('trade')}
                 >
                   Buy / Sell Coin
                 </button>
               </div>
               
-              {/* Exchange Form */}
-              <div className="space-y-4 flex-grow flex flex-col">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-gray-600 flex items-center justify-center rounded-full mr-3">
-                      <FaWallet className="text-white" size={16} />
+              {/* Exchange or Buy/Sell Form based on active tab */}
+              {activeExchangeTab === 'exchange' ? (
+                <div className="space-y-4 flex-grow flex flex-col">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-gray-600 flex items-center justify-center rounded-full mr-3">
+                        <FaWallet className="text-white" size={16} />
+                      </div>
+                      <span className="text-white text-xs">$38,447.54</span>
                     </div>
-                    <span className="text-white text-xs">$38,447.54</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center mr-2">
-                      <FaBitcoin className="text-white" size={16} />
-                    </div>
-                    <span className="text-white text-xs">$38,447.54</span>
-                  </div>
-                </div>
-                
-                <div className="bg-[#272b3b] rounded-lg p-2">
-                  <div className="flex justify-between items-center mb-1">
-                    <div className="flex items-center flex-col">
-                        <div className="text-gray-400 text-xs">Coin</div>
-                        <div className="text-white text-sm">{exchangeCoin.from.amount}</div>
-                    </div>
-                    <div className="relative">
-                      <button 
-                        className="flex items-center" 
-                        onClick={() => setShowCryptoDropdown(!showCryptoDropdown)}
-                      >
-                        <div className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center mr-2">
-                          {exchangeCoin.from.symbol === 'BTC' ? (
-                            <FaBitcoin className="text-white" size={12} />
-                          ) : exchangeCoin.from.symbol === 'ETH' ? (
-                            <FaEthereum className="text-white" size={12} />
-                          ) : (
-                            <span className="text-white text-xs">{exchangeCoin.from.symbol.charAt(0)}</span>
-                          )}
-                        </div>
-                        <span className="text-white text-sm mr-1">{exchangeCoin.from.symbol}</span>
-                        <IoIosArrowDown className="text-white" size={16} />
-                      </button>
-                      
-                      {showCryptoDropdown && (
-                        <div className="absolute top-full right-0 mt-1 bg-[#272b3b] rounded-lg shadow-lg z-10 w-32">
-                          {cryptos.map((crypto) => (
-                            <button
-                              key={crypto}
-                              className="w-full text-left px-3 py-2 text-sm text-white hover:bg-[#31354a] transition-colors flex items-center"
-                              onClick={() => handleExchangeCoinSelect(crypto)}
-                            >
-                              <div className="w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center mr-2">
-                                <span className="text-white text-xs">{crypto.charAt(0)}</span>
-                              </div>
-                              {crypto}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center mr-2">
+                        <FaBitcoin className="text-white" size={16} />
+                      </div>
+                      <span className="text-white text-xs">$38,447.54</span>
                     </div>
                   </div>
-                </div>
-                
-                <div className="flex justify-center">
-                  <button 
-                    className="bg-[#272b3b] p-2 rounded-full hover:bg-[#31354a] transition-colors"
-                    onClick={handleSwapCurrencies}
-                  >
-                    <RiArrowUpDownLine className="text-white" size={20} />
-                  </button>
-                </div>
-                
-                <div className="bg-[#272b3b] rounded-lg p-2">
-                  <div className="flex justify-between items-center mb-1">
-                    <div className="flex items-left flex-col">
-                        <div className="text-gray-400 text-xs">Change</div>
-                        <div className="text-white text-sm ml-1">${exchangeCoin.to.amount}</div>
-                    </div>
-                    <div className="relative">
-                      <button 
-                        className="flex items-center"
-                        onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
-                      >
-                        <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center mr-2">
-                          <FaWallet className="text-white" size={12} />
-                        </div>
-                        <span className="text-white text-sm mr-1">{exchangeCoin.to.symbol}</span>
-                        <IoIosArrowDown className="text-white" size={16} />
-                      </button>
-                      
-                      {showCurrencyDropdown && (
-                        <div className="absolute top-full right-0 mt-1 bg-[#272b3b] rounded-lg shadow-lg z-10 w-32">
-                          {currencies.map((currency) => (
-                            <button
-                              key={currency}
-                              className="w-full text-left px-3 py-2 text-sm text-white hover:bg-[#31354a] transition-colors"
-                              onClick={() => handleCurrencySelect(currency)}
-                            >
-                              {currency}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                  
+                  <div className="bg-[#272b3b] rounded-lg p-2">
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="flex items-center flex-col">
+                          <div className="text-gray-400 text-xs">Coin</div>
+                          <div className="text-white text-sm">{exchangeCoin.from.amount}</div>
+                      </div>
+                      <div className="relative">
+                        <button 
+                          className="flex items-center" 
+                          onClick={() => setShowCryptoDropdown(!showCryptoDropdown)}
+                        >
+                          <div className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center mr-2">
+                            {getCoinIconForExchange(exchangeCoin.from.symbol)}
+                          </div>
+                          <span className="text-white text-sm mr-1">{exchangeCoin.from.symbol}</span>
+                          <IoIosArrowDown className="text-white" size={16} />
+                        </button>
+                        
+                        {showCryptoDropdown && (
+                          <div className="absolute top-full right-0 mt-1 bg-[#272b3b] rounded-lg shadow-lg z-10 w-32">
+                            {cryptos.map((crypto) => (
+                              <button
+                                key={crypto}
+                                className="w-full text-left px-3 py-2 text-sm text-white hover:bg-[#31354a] transition-colors flex items-center"
+                                onClick={() => handleExchangeCoinSelect(crypto)}
+                              >
+                                <div className="w-5 h-5 rounded-full bg-yellow-500 flex items-center justify-center mr-2">
+                                  {getCoinIconForExchange(crypto)}
+                                </div>
+                                {crypto}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
+                  
+                  <div className="flex justify-center">
+                    <button 
+                      className="bg-[#272b3b] p-2 rounded-full hover:bg-[#31354a] transition-colors"
+                      onClick={handleSwapCurrencies}
+                    >
+                      <RiArrowUpDownLine className="text-white" size={20} />
+                    </button>
+                  </div>
+                  
+                  <div className="bg-[#272b3b] rounded-lg p-2">
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="flex items-left flex-col">
+                          <div className="text-gray-400 text-xs">Change</div>
+                          <div className="text-white text-sm ml-1">${exchangeCoin.to.amount}</div>
+                      </div>
+                      <div className="relative">
+                        <button 
+                          className="flex items-center"
+                          onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
+                        >
+                          <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center mr-2">
+                            <FaWallet className="text-white" size={12} />
+                          </div>
+                          <span className="text-white text-sm mr-1">{exchangeCoin.to.symbol}</span>
+                          <IoIosArrowDown className="text-white" size={16} />
+                        </button>
+                        
+                        {showCurrencyDropdown && (
+                          <div className="absolute top-full right-0 mt-1 bg-[#272b3b] rounded-lg shadow-lg z-10 w-32">
+                            {currencies.map((currency) => (
+                              <button
+                                key={currency}
+                                className="w-full text-left px-3 py-2 text-sm text-white hover:bg-[#31354a] transition-colors"
+                                onClick={() => handleCurrencySelect(currency)}
+                              >
+                                {currency}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="py-2">
+                    <div className="text-gray-400 text-xs">No extra fees:</div>
+                  </div>
+                  
+                  <div className="mt-auto pt-4">
+                    <button 
+                      className={`w-full ${isExchangeLoading ? 'bg-blue-800' : 'bg-blue-600'} text-white font-medium rounded-lg py-3 text-sm hover:bg-blue-700 transition-colors relative`}
+                      onClick={handleExchange}
+                      disabled={isExchangeLoading}
+                    >
+                      {isExchangeLoading ? (
+                        <>
+                          <span className="opacity-0">Exchange</span>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          </div>
+                        </>
+                      ) : 'Exchange'}
+                    </button>
+                  </div>
                 </div>
-                
-                <div className="py-2">
-                  <div className="text-gray-400 text-xs">No extra fees:</div>
+              ) : (
+                /* Buy/Sell Form */
+                <div className="space-y-4 flex-grow flex flex-col">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-gray-600 flex items-center justify-center rounded-full mr-3">
+                        <FaWallet className="text-white" size={16} />
+                      </div>
+                      <span className="text-white text-xs">$38,447.54</span>
+                    </div>
+                  </div>
+                  
+                  {/* Trade Type Toggle */}
+                  <div className="bg-[#272b3b] rounded-lg p-1 flex">
+                    <button 
+                      className={`flex-1 py-2 rounded-lg text-center text-sm ${tradeType === 'buy' ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
+                      onClick={() => handleTradeTypeChange('buy')}
+                    >
+                      Buy
+                    </button>
+                    <button 
+                      className={`flex-1 py-2 rounded-lg text-center text-sm ${tradeType === 'sell' ? 'bg-red-600 text-white' : 'text-gray-400'}`}
+                      onClick={() => handleTradeTypeChange('sell')}
+                    >
+                      Sell
+                    </button>
+                  </div>
+                  
+                  {/* Coin Selector */}
+                  <div className="bg-[#272b3b] rounded-lg p-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400 text-xs">Coin</span>
+                      <div className="relative">
+                        <button 
+                          className="flex items-center" 
+                          onClick={() => setShowTradeDropdown(!showTradeDropdown)}
+                        >
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center mr-2" style={{ backgroundColor: getCoinColor(selectedCoin.toLowerCase()) }}>
+                            {getCoinIconForExchange(selectedCoin)}
+                          </div>
+                          <span className="text-white text-sm mr-1">{selectedCoin}</span>
+                          <IoIosArrowDown className="text-white" size={16} />
+                        </button>
+                        
+                        {showTradeDropdown && (
+                          <div className="absolute top-full right-0 mt-1 bg-[#272b3b] rounded-lg shadow-lg z-10 w-32 max-h-48 overflow-y-auto">
+                            {cryptos.map((crypto) => (
+                              <button
+                                key={crypto}
+                                className="w-full text-left px-3 py-2 text-sm text-white hover:bg-[#31354a] transition-colors flex items-center"
+                                onClick={() => handleCoinSelect(crypto)}
+                              >
+                                <div className="w-5 h-5 rounded-full flex items-center justify-center mr-2" style={{ backgroundColor: getCoinColor(crypto.toLowerCase()) }}>
+                                  {getCoinIconForExchange(crypto)}
+                                </div>
+                                {crypto}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Current Price */}
+                  <div className="bg-[#272b3b] rounded-lg p-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400 text-xs">Current Price</span>
+                      <span className="text-white text-sm">${getCoinPrice(selectedCoin)}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Amount Input */}
+                  <div className="bg-[#272b3b] rounded-lg p-3">
+                    <div className="flex flex-col">
+                      <span className="text-gray-400 text-xs mb-2">Amount</span>
+                      <div className="flex">
+                        <input
+                          type="text"
+                          value={tradeAmount}
+                          onChange={handleTradeAmountChange}
+                          placeholder="0.00"
+                          className="bg-transparent border-none outline-none text-white text-sm flex-1"
+                        />
+                        <span className="text-gray-400 text-sm">{selectedCoin}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Total in USD */}
+                  {tradeAmount && (
+                    <div className="bg-[#272b3b] rounded-lg p-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400 text-xs">Total</span>
+                        <span className="text-white text-sm">
+                          ${(parseFloat(tradeAmount) * (coins?.find(c => c.symbol.toUpperCase() === selectedCoin)?.current_price || 0)).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="mt-auto pt-4">
+                    <button 
+                      className={`w-full ${isExchangeLoading ? 'bg-gray-700' : tradeType === 'buy' ? 'bg-blue-600' : 'bg-red-600'} text-white font-medium rounded-lg py-3 text-sm hover:${tradeType === 'buy' ? 'bg-blue-700' : 'bg-red-700'} transition-colors relative`}
+                      onClick={handleTrade}
+                      disabled={isExchangeLoading || !tradeAmount}
+                    >
+                      {isExchangeLoading ? (
+                        <>
+                          <span className="opacity-0">{tradeType === 'buy' ? 'Buy' : 'Sell'} {selectedCoin}</span>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                          </div>
+                        </>
+                      ) : `${tradeType === 'buy' ? 'Buy' : 'Sell'} ${selectedCoin}`}
+                    </button>
+                  </div>
                 </div>
-                
-                <div className="mt-auto pt-4">
-                  <button 
-                    className="w-full bg-blue-600 text-white font-medium rounded-lg py-3 text-sm hover:bg-blue-700 transition-colors"
-                    onClick={handleExchange}
-                  >
-                    Exchange
-                  </button>
-                </div>
-              </div>
+              )}
             </div>
             
             {/* My Portfolio */}
@@ -846,39 +1099,44 @@ const Transactions = () => {
               
               {/* Portfolio items */}
               <div className="space-y-4 flex-grow overflow-auto">
-                {isLoading ? (
+                {isLoading || portfolioStatus === 'loading' ? (
                   <div className="flex-1 flex items-center justify-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                   </div>
-                ) : error ? (
+                ) : portfolioStatus === 'failed' ? (
                   <div className="flex-1 flex items-center justify-center text-red-500">
-                    <p>Portföy verileri alınırken bir hata oluştu.</p>
+                    <p>Portföy verileri alınırken bir hata oluştu: {portfolioError}</p>
+                  </div>
+                ) : portfolioItems.length === 0 ? (
+                  <div className="text-center py-6">
+                    <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-[#272b3b]">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-400 mb-2">Portföyünüzde coin bulunamadı</p>
+                    <p className="text-xs text-gray-500">Coin eklemek için Portfolio bölümünü kullanın</p>
                   </div>
                 ) : (
-                  portfolioItems.map((item, index) => {
-                    const Icon = item.icon as IconType;
-                    return (
-                      <div key={index} className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 rounded-full flex items-center justify-center mr-3" style={{ backgroundColor: item.bgColor }}>
-                            {typeof item.icon === 'function' ? (
-                              <Icon className="text-white" size={20} />
-                            ) : (
-                              item.icon
-                            )}
-                          </div>
-                          <div>
-                            <h3 className="text-white font-medium text-base">{item.name}</h3>
-                            <p className="text-gray-400 text-xs">{item.price}</p>
-                          </div>
+                  portfolioItems.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center mr-3" style={{ backgroundColor: item.bgColor || getCoinColor(item.symbol) }}>
+                          <span className="text-white font-bold">{item.symbol.charAt(0).toUpperCase()}</span>
                         </div>
-                        <div className="text-right">
-                          <p className={item.trend === 'up' ? 'text-green-500 text-xs' : 'text-red-500 text-xs'}>{item.change}</p>
-                          <p className="text-white text-xs">{item.amount} {item.symbol}</p>
+                        <div>
+                          <h3 className="text-white font-medium text-base">{item.name}</h3>
+                          <p className="text-gray-400 text-xs">{item.price || '$0.00'}</p>
                         </div>
                       </div>
-                    );
-                  })
+                      <div className="text-right">
+                        <p className={item.isPositive ? 'text-green-500 text-xs' : 'text-red-500 text-xs'}>
+                          {item.isPositive ? '+' : '-'}{item.percentChange || '0.00%'}
+                        </p>
+                        <p className="text-white text-xs">{item.amount} {item.symbol}</p>
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
             </div>

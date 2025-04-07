@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext, useEffect} from 'react';
 import { HiMenuAlt2, HiBell } from 'react-icons/hi';
 import { FaBitcoin, FaEthereum, FaArrowUp, FaArrowDown, FaExchangeAlt, FaDollarSign, FaWallet } from 'react-icons/fa';
 import { SiLitecoin, SiSolana, SiBinance } from 'react-icons/si';
@@ -72,6 +72,41 @@ const getCoinColor = (symbol: string): string => {
   }
 };
 
+// Define static chart data for different currencies
+const chartData: {
+  [key: string]: {
+    values: number[];
+    trend: 'up' | 'down';
+  }
+} = {
+  BTC: {
+    values: [40, 60, 45, 70, 55, 80, 65, 90, 75, 85, 50, 60],
+    trend: 'up'
+  },
+  ETH: {
+    values: [65, 45, 55, 70, 80, 50, 40, 60, 75, 85, 90, 70],
+    trend: 'up'
+  },
+  USD: {
+    values: [80, 75, 70, 65, 60, 55, 50, 45, 40, 38, 35, 30],
+    trend: 'down'
+  }
+};
+
+// Static fallback data in case of API failure
+const staticPortfolioData = [
+  { symbol: 'BTC', balance: '2.31', fiatValue: '$75,183.00', change: '1.2%', trend: 'up' as const },
+  { symbol: 'ETH', balance: '15.48', fiatValue: '$31,245.76', change: '0.8%', trend: 'up' as const },
+  { symbol: 'SOL', balance: '132.5', fiatValue: '$18,947.50', change: '2.3%', trend: 'down' as const },
+  { symbol: 'BNB', balance: '41.32', fiatValue: '$12,354.68', change: '0.5%', trend: 'up' as const },
+  { symbol: 'AVAX', balance: '210.45', fiatValue: '$4,893.84', change: '1.1%', trend: 'down' as const },
+  { symbol: 'DOT', balance: '562.1', fiatValue: '$3,248.93', change: '0.7%', trend: 'up' as const },
+  { symbol: 'ADA', balance: '3125.8', fiatValue: '$2,781.96', change: '1.5%', trend: 'down' as const },
+  { symbol: 'MATIC', balance: '4582.6', fiatValue: '$2,382.95', change: '2.1%', trend: 'up' as const },
+  { symbol: 'LINK', balance: '187.2', fiatValue: '$2,246.40', change: '0.9%', trend: 'down' as const },
+  { symbol: 'DOGE', balance: '12857.4', fiatValue: '$1,157.17', change: '1.8%', trend: 'up' as const }
+];
+
 export default function Wallet() {
   const { toggleSidebar } = useContext(SidebarContext);
   const [activeTab, setActiveTab] = useState('coins');
@@ -85,66 +120,154 @@ export default function Wallet() {
   
   // Dinamik portföy verileri
   const [dynamicWalletItems, setDynamicWalletItems] = useState<WalletItem[]>([]);
-  const [totalBalanceUSD, setTotalBalanceUSD] = useState("0");
-  const [totalBalanceChange, setTotalBalanceChange] = useState("0");
-  const [totalBalanceChangeAmount, setTotalBalanceChangeAmount] = useState("0");
+  const [totalBalanceUSD, setTotalBalanceUSD] = useState("$0.00");
+  const [totalBalanceChange, setTotalBalanceChange] = useState("0.00%");
+  const [totalBalanceChangeAmount, setTotalBalanceChangeAmount] = useState("$0.00");
   const [totalBalanceTrend, setTotalBalanceTrend] = useState<'up' | 'down'>('up');
+  const [dataLoadStatus, setDataLoadStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   
   // Pagination functionality
   const itemsPerPage = 5;
   const [timePeriod, setTimePeriod] = useState('7 Days');
   
+  // Static Bitcoin balance - fixed value for demonstration
+  const btcAmount = "2.31";
+  
   // API'dan gelen verileri işle
   useEffect(() => {
-    if (coins && coins.length > 0) {
-      // Rastgele miktar oluşturmak için fonksiyon
-      const getRandomAmount = (min: number, max: number, decimals: number) => {
-        return (Math.random() * (max - min) + min).toFixed(decimals);
-      };
+    if (isLoading) {
+      setDataLoadStatus('loading');
       
-      // İlk 5 coin için portföy öğeleri oluştur
-      const walletItems = coins.slice(0, 10).map(coin => {
-        const randomBalance = getRandomAmount(0.1, 10, 4);
-        const fiatValue = (parseFloat(randomBalance) * coin.current_price).toFixed(2);
-        const priceChangePercent = coin.price_change_percentage_24h;
-        const trend: 'up' | 'down' = priceChangePercent >= 0 ? 'up' : 'down';
-        
+      // Load static data immediately while waiting for API
+      const staticWalletItems = staticPortfolioData.map(item => {
         return {
-          name: coin.name,
-          symbol: coin.symbol.toUpperCase(),
-          icon: getCoinIcon(coin.symbol),
-          bgColor: getCoinColor(coin.symbol),
-          balance: randomBalance,
-          fiatValue: `$${parseFloat(fiatValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-          change: `${Math.abs(priceChangePercent).toFixed(1)}%`,
-          trend: trend
+          name: getCoinNameFromSymbol(item.symbol),
+          symbol: item.symbol,
+          icon: getCoinIcon(item.symbol.toLowerCase()),
+          bgColor: getCoinColor(item.symbol.toLowerCase()),
+          balance: item.balance,
+          fiatValue: item.fiatValue,
+          change: item.change,
+          trend: item.trend
         };
       });
       
-      // Toplam portföy değerini hesapla
-      let totalUSD = 0;
-      let totalChangePercent = 0;
+      // Use fixed Bitcoin values
+      setDynamicWalletItems(staticWalletItems);
+      setTotalBalanceUSD("$75,183.00");
+      setTotalBalanceChange("1.3%");
+      setTotalBalanceChangeAmount("$950.45");
+      setTotalBalanceTrend('up');
+      setTotalPages(Math.ceil(staticWalletItems.length / itemsPerPage));
+    }
+    
+    if (error) {
+      setDataLoadStatus('error');
+      console.error("Error fetching portfolio data:", error);
       
-      walletItems.forEach(item => {
-        totalUSD += parseFloat(item.fiatValue.replace('$', '').replace(',', ''));
-      });
+      // If error, keep using static data but show error state
+      alert("Could not fetch live data. Using cached data instead.");
+    }
+    
+    if (coins && coins.length > 0) {
+      setDataLoadStatus('success');
       
-      // Ortalama değişim yüzdesini hesapla (basitleştirilmiş)
-      if (coins.length > 0) {
-        const btcChangePercent = coins[0].price_change_percentage_24h;
-        const changeAmount = (totalUSD * btcChangePercent / 100).toFixed(2);
-        
-        totalChangePercent = btcChangePercent;
-        setTotalBalanceChangeAmount(`$${Math.abs(parseFloat(changeAmount)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
-        setTotalBalanceTrend(totalChangePercent >= 0 ? 'up' : 'down');
+      // Find Bitcoin data - this will be the basis for our portfolio
+      const btcCoin = coins.find(coin => coin.symbol === 'btc');
+      
+      if (!btcCoin) {
+        console.error("Bitcoin data not found in API response");
+        return;
       }
       
-      setTotalBalanceUSD(`$${totalUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
-      setTotalBalanceChange(`${Math.abs(totalChangePercent).toFixed(1)}%`);
+      const btcPriceChangePercent = btcCoin.price_change_percentage_24h;
+      const btcTrend: 'up' | 'down' = btcPriceChangePercent >= 0 ? 'up' : 'down';
+      
+      // Calculate total portfolio value based on fixed BTC amount * current BTC price
+      const btcPrice = btcCoin.current_price;
+      const totalBtcValue = parseFloat(btcAmount) * btcPrice;
+      
+      // Format BTC value for display
+      const formattedTotalUSD = `$${totalBtcValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      
+      // Calculate change amount
+      const changeAmount = (totalBtcValue * btcPriceChangePercent / 100).toFixed(2);
+      
+      // Create wallet items with other coins too, but BTC will be first and determine the total
+      const walletItems = staticPortfolioData.map(item => {
+        // For Bitcoin, use the real price from API
+        if (item.symbol === 'BTC') {
+          const fiatValue = (parseFloat(btcAmount) * btcCoin.current_price).toFixed(2);
+          return {
+            name: 'Bitcoin',
+            symbol: 'BTC',
+            icon: getCoinIcon('btc'),
+            bgColor: getCoinColor('btc'),
+            balance: btcAmount,
+            fiatValue: `$${parseFloat(fiatValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            change: `${Math.abs(btcPriceChangePercent).toFixed(1)}%`,
+            trend: btcTrend
+          };
+        }
+        
+        // For other coins, use the matching coin from API or static data if not found
+        const coin = coins.find(c => c.symbol === item.symbol.toLowerCase());
+        if (coin) {
+          const fiatValue = (parseFloat(item.balance) * coin.current_price).toFixed(2);
+          const priceChangePercent = coin.price_change_percentage_24h;
+          const trend: 'up' | 'down' = priceChangePercent >= 0 ? 'up' : 'down';
+          
+          return {
+            name: getCoinNameFromSymbol(item.symbol),
+            symbol: item.symbol,
+            icon: getCoinIcon(item.symbol.toLowerCase()),
+            bgColor: getCoinColor(item.symbol.toLowerCase()),
+            balance: item.balance,
+            fiatValue: `$${parseFloat(fiatValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            change: `${Math.abs(priceChangePercent).toFixed(1)}%`,
+            trend: trend
+          };
+        }
+        
+        return {
+          name: getCoinNameFromSymbol(item.symbol),
+          symbol: item.symbol,
+          icon: getCoinIcon(item.symbol.toLowerCase()),
+          bgColor: getCoinColor(item.symbol.toLowerCase()),
+          balance: item.balance,
+          fiatValue: item.fiatValue,
+          change: item.change,
+          trend: item.trend
+        };
+      });
+      
+      // Update the portfolio balance with calculated BTC value
+      setTotalBalanceUSD(formattedTotalUSD);
+      setTotalBalanceChange(`${Math.abs(btcPriceChangePercent).toFixed(1)}%`);
+      setTotalBalanceChangeAmount(`$${Math.abs(parseFloat(changeAmount)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+      setTotalBalanceTrend(btcTrend);
       setDynamicWalletItems(walletItems);
       setTotalPages(Math.ceil(walletItems.length / itemsPerPage));
     }
-  }, [coins]);
+  }, [coins, error, isLoading, btcAmount, itemsPerPage]);
+  
+  // Helper to get coin names from symbols for static data
+  const getCoinNameFromSymbol = (symbol: string): string => {
+    const coinNames: {[key: string]: string} = {
+      'BTC': 'Bitcoin',
+      'ETH': 'Ethereum',
+      'SOL': 'Solana',
+      'BNB': 'Binance Coin',
+      'AVAX': 'Avalanche',
+      'DOT': 'Polkadot',
+      'ADA': 'Cardano',
+      'MATIC': 'Polygon',
+      'LINK': 'Chainlink',
+      'DOGE': 'Dogecoin'
+    };
+    
+    return coinNames[symbol] || symbol;
+  };
   
   // Handle pagination
   const handlePrevPage = () => {
@@ -282,19 +405,26 @@ export default function Wallet() {
         <div className="flex gap-6">
           <div className="w-2/3 space-y-6">
             {/* Portfolio Balance Section */}
-            <div className="bg-[#121319] rounded-xl p-5 h-[230px]">
+            <div className="bg-[#121319] rounded-xl p-5 h-[230px] relative overflow-hidden">
+              {/* Refresh indicator - shows when data is refreshing */}
+              {dataLoadStatus === 'loading' && (
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 animate-pulse"></div>
+              )}
+              
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-white text-xl font-semibold">Portfolio Balance</h2>
+                <h2 className="text-white text-xl font-semibold flex items-center">
+                  Portfolio Balance
+                  {dataLoadStatus === 'loading' && (
+                    <div className="ml-2 w-4 h-4 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"></div>
+                  )}
+                  {dataLoadStatus === 'error' && (
+                    <div className="ml-2 text-xs text-red-500 px-2 py-0.5 rounded bg-red-500/10">using cached data</div>
+                  )}
+                </h2>
                 
                 <div className="flex items-center">
                   <button 
                     className="bg-[#272b3b] h-8 px-3 py-1 rounded-lg text-sm text-white flex items-center"
-                    onClick={() => {
-                      const periods = ['24 Hours', '7 Days', '30 Days', '90 Days', '1 Year'];
-                      const currentIndex = periods.indexOf(timePeriod);
-                      const nextIndex = (currentIndex + 1) % periods.length;
-                      handleTimePeriodChange(periods[nextIndex]);
-                    }}
                   >
                     <span>{timePeriod}</span>
                     <svg className="ml-2 w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
@@ -337,18 +467,32 @@ export default function Wallet() {
               
               <div className="flex space-x-6">
                 <div className="w-1/3">
-                  <div className="bg-[#272b3b] rounded-lg p-4">
+                  <div className="bg-[#272b3b] rounded-lg p-3 mt-8">
                     <div className="flex justify-between items-center mb-3">
                       <div className="text-gray-400 text-sm">Total Balance</div>
                       <FaWallet className="text-gray-400" size={16} />
                     </div>
-                    {isLoading ? (
-                      <div className="text-white text-2xl font-bold mb-2">Loading...</div>
-                    ) : error ? (
-                      <div className="text-red-500 text-2xl font-bold mb-2">Error</div>
+                    {dataLoadStatus === 'loading' ? (
+                      <div className="animate-pulse">
+                        <div className="h-8 bg-gray-700 rounded w-3/4 mb-2"></div>
+                        <div className="h-4 bg-gray-700 rounded w-1/2"></div>
+                      </div>
+                    ) : dataLoadStatus === 'error' ? (
+                      <div>
+                        <div className="text-white text-2xl font-bold mb-2">
+                          {totalBalanceUSD}
+                        </div>
+                        <div className="flex items-center">
+                          <div className="flex items-center bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded text-sm">
+                            <span>from cache</span>
+                          </div>
+                        </div>
+                      </div>
                     ) : (
                       <>
-                        <div className="text-white text-2xl font-bold mb-2">{totalBalanceUSD}</div>
+                        <div className="text-white text-2xl font-bold mb-2">
+                          {totalBalanceUSD}
+                        </div>
                         <div className="flex items-center">
                           <div className={`flex items-center ${totalBalanceTrend === 'up' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'} px-2 py-0.5 rounded text-sm`}>
                             {totalBalanceTrend === 'up' ? <FaArrowUp size={10} className="mr-1" /> : <FaArrowDown size={10} className="mr-1" />}
@@ -371,17 +515,22 @@ export default function Wallet() {
                       </div>
                     </div>
                     
-                    {/* Chart placeholder */}
-                    <div className="bg-[#272b3b] rounded-lg h-[120px] flex items-center justify-center">
+                    {/* Chart based on selected currency */}
+                    <div className="bg-[#272b3b] rounded-lg h-[120px] flex items-center justify-center overflow-hidden">
                       <div className="h-[80px] w-full px-4 flex items-end">
-                        <div className="h-[40%] w-[8%] bg-green-500/20 rounded-sm mx-1"></div>
-                        <div className="h-[60%] w-[8%] bg-green-500/20 rounded-sm mx-1"></div>
-                        <div className="h-[45%] w-[8%] bg-green-500/20 rounded-sm mx-1"></div>
-                        <div className="h-[70%] w-[8%] bg-green-500/20 rounded-sm mx-1"></div>
-                        <div className="h-[55%] w-[8%] bg-green-500/20 rounded-sm mx-1"></div>
-                        <div className="h-[80%] w-[8%] bg-green-500/40 rounded-sm mx-1"></div>
-                        <div className="h-[65%] w-[8%] bg-green-500/60 rounded-sm mx-1"></div>
-                        <div className="h-[90%] w-[8%] bg-green-500 rounded-sm mx-1"></div>
+                        {chartData[activeCurrency].values.map((height: number, index: number) => (
+                          <div 
+                            key={index}
+                            className="mx-0.5 rounded-sm transition-all duration-500 ease-in-out"
+                            style={{ 
+                              height: `${height}%`, 
+                              width: '6%',
+                              backgroundColor: chartData[activeCurrency].trend === 'up' 
+                                ? `rgba(34, 197, 94, ${0.2 + (height/100) * 0.8})` 
+                                : `rgba(239, 68, 68, ${0.2 + (height/100) * 0.8})`,
+                            }}
+                          ></div>
+                        ))}
                       </div>
                     </div>
                   </div>

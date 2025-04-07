@@ -9,9 +9,14 @@ import Image from 'next/image';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
   setSelectedTimeRange, 
-  selectSelectedTimeRange 
+  selectSelectedTimeRange,
+  setSelectedCoin,
+  selectSelectedCoin
 } from '@/redux/features/cryptoSlice';
+import { fetchUserPortfolio } from '@/redux/slices/portfolioSlice';
+import { RootState, AppDispatch } from '@/redux/store';
 import MiniChart from '@/components/MiniChart';
+import { useState, useRef, useEffect } from 'react';
 
 // Dynamic import of chart component with SSR disabled
 const CryptoChart = dynamic(() => import('@/components/CryptoChart'), { ssr: false });
@@ -55,18 +60,54 @@ const getCoinBgColor = (symbol: string) => {
 
 export default function Dashboard() {
   // Redux state kullanımı
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const selectedTimeRange = useSelector(selectSelectedTimeRange);
+  const selectedCoin = useSelector(selectSelectedCoin);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   
- 
+  // Get portfolio data from Redux
+  const { items: portfolioItems, status: portfolioStatus } = useSelector((state: RootState) => state.portfolio);
+  
+  // Fetch portfolio data when component mounts
+  useEffect(() => {
+    dispatch(fetchUserPortfolio());
+  }, [dispatch]);
+  
+  // Click outside to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
   
   // Zaman aralığı değiştiğinde Redux state'ini güncelleme
   const handleTimeRangeChange = (range: string) => {
     dispatch(setSelectedTimeRange(range));
   };
   
+  // Coin değiştiğinde Redux state'ini güncelleme
+  const handleCoinChange = (coinId: string) => {
+    dispatch(setSelectedCoin(coinId));
+    setDropdownOpen(false);
+  };
+  
   // API'dan verileri çekme
   const { data: coins, error, isLoading } = useGetCoinsQuery();
+
+  // Get the current selected coin object
+  const currentCoin = selectedCoin && coins
+    ? coins.find(coin => coin.id === selectedCoin) 
+    : coins && coins.length > 0 
+      ? coins[0] 
+      : null;
   
   return (
     <div className="min-h-screen bg-[#21232d]">
@@ -137,18 +178,6 @@ export default function Dashboard() {
             coins?.slice(0, 4).map((coin, index) => {
               const is24hPositive = coin.price_change_percentage_24h >= 0;
               
-              // Sahte fiyat verileri oluştur
-              const priceData = Array.from({ length: 24 }, (_, i) => {
-                // Coin değerine göre rasgele değişimler oluştur
-                const baseValue = coin.current_price;
-                const volatility = baseValue * 0.02; // %2 volatilite
-                const randomChange = (Math.random() - 0.5) * volatility;
-                // Trending yönünü belirle
-                const trend = is24hPositive ? 1 : -1;
-                // Trendi de ekleyerek gerçekçi veri oluştur
-                return baseValue + randomChange + (trend * volatility * (i / 24));
-              });
-              
               return (
                 <div key={index} className="bg-[#121319] rounded-lg p-5">
                   <div className="flex justify-between items-center mb-3">
@@ -186,7 +215,7 @@ export default function Dashboard() {
                     </span>
                     <div className="w-24 h-8">
                       <MiniChart 
-                        data={priceData} 
+                        coinId={coin.id}
                         isPositive={is24hPositive} 
                         width={96} 
                         height={32}
@@ -207,7 +236,7 @@ export default function Dashboard() {
             
             {/* Portfolio items */}
             <div className="space-y-4">
-              {isLoading ? (
+              {isLoading || portfolioStatus === 'loading' ? (
                 // Loading state için placeholder items
                 [...Array(5)].map((_, index) => (
                   <div key={index} className="flex items-center justify-between animate-pulse">
@@ -224,46 +253,47 @@ export default function Dashboard() {
                     </div>
                   </div>
                 ))
-              ) : error ? (
-                // Hata durumu
+              ) : portfolioStatus === 'failed' ? (
+                // Portfolio hata durumu
                 <div className="bg-red-500 bg-opacity-10 text-red-500 p-4 rounded-lg">
                   <p>Portföy verileri alınırken bir hata oluştu.</p>
                 </div>
+              ) : portfolioItems.length === 0 ? (
+                // Boş portfolio durumu
+                <div className="text-center py-6">
+                  <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-[#272b3b]">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </div>
+                  <p className="text-gray-400 mb-2">Portföyünüzde coin bulunamadı</p>
+                  <p className="text-xs text-gray-500">Coin eklemek için Portfolio bölümünü kullanın</p>
+                </div>
               ) : (
-                // API verileri geldiğinde portfolio itemları gösterme
-                coins?.slice(0, 5).map((coin, index) => {
-                  const is24hPositive = coin.price_change_percentage_24h >= 0;
-                  // Her koin için rastgele bir miktar yaratma (gerçek uygulama için API'dan veya lokal veritabanından alınmalıdır)
-                  const randomAmount = (Math.random() * 2).toFixed(5);
-                  
+                // Firestore/Redux'dan gelen portfolio verilerini gösterme
+                portfolioItems.map((item, index) => {
                   return (
                     <div key={index} className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center mr-3" style={{ backgroundColor: getCoinBgColor(coin.symbol) }}>
-                          {coin.image ? (
-                            <Image
-                              src={coin.image}
-                              alt={coin.name}
-                              width={20}
-                              height={20}
-                              className="rounded-full"
-                            />
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center mr-3" style={{ backgroundColor: item.bgColor || getCoinBgColor(item.symbol) }}>
+                          {item.symbol ? (
+                            <span className="text-white font-bold">{item.symbol.toUpperCase().substring(0, 1)}</span>
                           ) : (
-                            getCoinIcon(coin.symbol)
+                            getCoinIcon(item.symbol)
                           )}
                         </div>
                         <div>
-                          <h3 className="text-white font-bold text-base">{coin.name}</h3>
+                          <h3 className="text-white font-bold text-base">{item.name}</h3>
                           <p className="text-gray-400 text-xs">
-                            ${coin.current_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {item.price}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={is24hPositive ? 'text-green-500 text-xs' : 'text-red-500 text-xs'}>
-                          {is24hPositive ? '+' : ''}{coin.price_change_percentage_24h.toFixed(2)}%
+                        <p className={item.isPositive ? 'text-green-500 text-xs' : 'text-red-500 text-xs'}>
+                          {item.isPositive ? '+' : '-'}{item.percentChange}
                         </p>
-                        <p className="text-white text-xs">{randomAmount} {coin.symbol.toUpperCase()}</p>
+                        <p className="text-white text-xs">{item.amount} {item.symbol.toUpperCase()}</p>
                       </div>
                     </div>
                   );
@@ -287,15 +317,71 @@ export default function Dashboard() {
                   </svg>
                 </button>
                 
-                {/* Currency Selector */}
-                <div className="flex items-center bg-[#272b3b] px-3 py-2 rounded-lg">
-                  <div className="mr-2">
-                    <span className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-white">$</span>
+                {/* Coin Selector Dropdown */}
+                <div className="relative" ref={dropdownRef}>
+                  <div 
+                    className="flex items-center bg-[#272b3b] px-3 py-2 rounded-lg cursor-pointer"
+                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                  >
+                    {currentCoin ? (
+                      <>
+                        <div className="mr-2">
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: getCoinBgColor(currentCoin.symbol) }}>
+                            {currentCoin.image ? (
+                              <Image
+                                src={currentCoin.image}
+                                alt={currentCoin.name}
+                                width={16}
+                                height={16}
+                                className="rounded-full"
+                              />
+                            ) : (
+                              getCoinIcon(currentCoin.symbol)
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-white mr-1">{currentCoin.symbol.toUpperCase()}</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="mr-2">
+                          <span className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-white">$</span>
+                        </div>
+                        <span className="text-white mr-1">USD</span>
+                      </>
+                    )}
+                    <svg className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
                   </div>
-                  <span className="text-white mr-1">USD</span>
-                  <svg className="w-4 h-4 text-white" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
+                  
+                  {/* Dropdown Menu */}
+                  {dropdownOpen && coins && (
+                    <div className="absolute z-10 mt-1 right-0 bg-[#272b3b] rounded-lg shadow-lg max-h-60 overflow-y-auto w-48">
+                      {coins.map((coin) => (
+                        <div 
+                          key={coin.id} 
+                          className="flex items-center px-4 py-2 hover:bg-[#1d202f] cursor-pointer"
+                          onClick={() => handleCoinChange(coin.id)}
+                        >
+                          <div className="w-5 h-5 rounded-full flex items-center justify-center mr-2" style={{ backgroundColor: getCoinBgColor(coin.symbol) }}>
+                            {coin.image ? (
+                              <Image
+                                src={coin.image}
+                                alt={coin.name}
+                                width={12}
+                                height={12}
+                                className="rounded-full"
+                              />
+                            ) : (
+                              getCoinIcon(coin.symbol)
+                            )}
+                          </div>
+                          <span className="text-white text-sm">{coin.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -304,9 +390,10 @@ export default function Dashboard() {
             <div className="h-[380px] relative">
               {!isLoading && coins && coins.length > 0 ? (
                 <CryptoChart 
-                  symbol="bitcoin" // Herzaman Bitcoin göster
+                  symbol={currentCoin?.id || "bitcoin"} 
                   timeRange={selectedTimeRange} 
-                  darkMode={true} 
+                  darkMode={true}
+                  priority={true}
                 />
               ) : (
                 <div className="flex items-center justify-center h-full">

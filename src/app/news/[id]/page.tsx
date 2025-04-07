@@ -21,29 +21,29 @@ const newsItems: NewsItem[] = [
   {
     id: 'news-1',
     title: "Bitcoin Surges Past $60,000 as Institutional Interest Grows",
-    content: "Bitcoin has experienced a significant price increase, reaching a new high for the year. The surge is attributed to growing institutional interest, with major financial firms increasing their Bitcoin holdings. Analysts suggest that the approval of spot Bitcoin ETFs and global economic uncertainty have contributed to the rise.\n\nThe world's largest cryptocurrency by market capitalization has seen renewed interest from institutional investors who previously remained on the sidelines. Major investment firms have been allocating portions of their portfolios to Bitcoin as a hedge against inflation and currency devaluation.\n\nRegulatory developments have also played a crucial role in this rally. The SEC's approval of spot Bitcoin ETFs has been viewed as a significant step towards mainstream acceptance of cryptocurrencies. These investment vehicles allow traditional investors to gain exposure to Bitcoin without directly holding the asset.\n\nMarket analysts are divided on the sustainability of this rally. Some believe that Bitcoin could reach new all-time highs in the coming months, citing increasing adoption and limited supply. Others warn of potential volatility, pointing to historical patterns of sharp corrections following rapid price increases.\n\nDespite the debate, the current price action reflects growing confidence in Bitcoin's role in the global financial ecosystem. As more institutions enter the space, the cryptocurrency's volatility may decrease, potentially making it more attractive to conservative investors.",
+    content: "Bitcoin has experienced a significant price increase, reaching a new high for the year. The surge is attributed to growing institutional interest, with major financial firms increasing their Bitcoin holdings. Analysts suggest that the approval of spot Bitcoin ETFs and global economic uncertainty have contributed to the rise.",
     image: "/bitcoin-news.jpg",
     author: "Efe Turgut",
     date: "May 31, 2023",
     category: "Bitcoin",
-    readTime: "5 min read"
+    readTime: "3 min read"
   },
   {
     id: 'news-2',
     title: "Ethereum's Shanghai Upgrade Set to Transform the Network",
-    content: "Ethereum's upcoming Shanghai upgrade is expected to bring significant changes to the network, including enabling staked ETH withdrawals. This long-awaited feature will allow validators to access their staked ETH and rewards, potentially increasing participation in Ethereum's proof-of-stake consensus mechanism.\n\nThe Shanghai upgrade represents one of the most significant technical milestones for Ethereum since its transition to proof-of-stake. Validators who have staked their ETH to secure the network will finally be able to withdraw their tokens, addressing a major concern that has existed since the Merge.\n\nBeyond staking withdrawals, the upgrade includes several Ethereum Improvement Proposals (EIPs) aimed at optimizing gas costs for various operations. These optimizations are expected to make the network more efficient and potentially reduce transaction fees for users.\n\nThe development team has been conducting extensive testing on test networks to ensure a smooth transition. The upgrade has already been successfully implemented on multiple testnets, with the mainnet implementation scheduled in the coming weeks.\n\nMarket analysts are closely watching how this upgrade might affect ETH's price and market dynamics. Some speculate that enabling withdrawals could lead to selling pressure in the short term, while others argue that the reduced risk of staking will attract more participants and increase demand for ETH in the long run.",
+    content: "Ethereum's upcoming Shanghai upgrade is expected to bring significant changes to the network, including enabling staked ETH withdrawals. This long-awaited feature will allow validators to access their staked ETH and rewards, potentially increasing participation in Ethereum's proof-of-stake consensus mechanism.",
     image: "/ethereum-news.jpg",
-    author: "Hasan Güzeller",
+    author: "Hasan Talha Güzeller",
     date: "June 2, 2023",
     category: "Ethereum",
-    readTime: "6 min read"
+    readTime: "4 min read"
   },
   {
     id: 'news-3',
     title: "Regulatory Clarity Emerges for Cryptocurrencies in Europe",
-    content: "European regulators have introduced a new framework for cryptocurrency regulation, providing much-needed clarity for businesses and investors. The new rules establish guidelines for crypto asset service providers and aim to protect consumers while fostering innovation in the blockchain space.\n\nThe Markets in Crypto-Assets (MiCA) regulation represents a comprehensive approach to cryptocurrency oversight in the European Union. The framework creates a standardized set of rules across all member states, eliminating the fragmented regulatory landscape that has complicated operations for crypto businesses.\n\nKey aspects of the regulation include licensing requirements for crypto service providers, capital requirements, and consumer protection measures. The framework also addresses environmental concerns by requiring transparency regarding the energy consumption and environmental impact of crypto assets.\n\nIndustry participants have generally welcomed the regulatory clarity, with many suggesting that clear rules will encourage institutional investment and mainstream adoption. Some concerns remain about the compliance burden for smaller startups, but provisions have been included to provide proportional requirements based on company size.\n\nThe European approach contrasts with more fragmented regulatory environments in other regions, potentially positioning Europe as a leader in crypto innovation while maintaining consumer protections. Other jurisdictions are watching closely, with some considering similar frameworks for their markets.",
+    content: "European regulators have introduced a new framework for cryptocurrency regulation, providing much-needed clarity for businesses and investors. The new rules establish guidelines for crypto asset service providers and aim to protect consumers while fostering innovation in the blockchain space.",
     image: "/regulation-news.jpg",
-    author: "Efe Turgut",
+    author: "ümid Rzayev ",
     date: "June 5, 2023",
     category: "Regulation",
     readTime: "5 min read"
@@ -51,19 +51,19 @@ const newsItems: NewsItem[] = [
   {
     id: 'news-4',
     title: "DeFi Projects See Surge in Total Value Locked",
-    content: "Decentralized finance (DeFi) protocols have experienced a significant increase in total value locked (TVL) over the past month. This growth suggests renewed confidence in the DeFi sector, with investors seeking alternatives to traditional financial services amidst global banking concerns.\n\nThe recent banking crisis has highlighted the vulnerabilities in traditional finance, driving interest in decentralized alternatives. DeFi platforms offering lending, borrowing, and trading services have seen substantial inflows, with total value locked increasing by over 30% in just four weeks.\n\nLeading this resurgence are Layer 2 solutions built on Ethereum, which offer reduced transaction costs while maintaining security. Protocols built on these scaling solutions have seen particularly strong growth as users become more comfortable with the technology.\n\nYield opportunities in DeFi have also become more attractive compared to traditional finance. With many DeFi protocols offering yields significantly higher than traditional savings accounts, investors looking for returns in a challenging economic environment have turned to these platforms.\n\nDespite the positive momentum, analysts caution that regulatory uncertainty remains a significant risk factor for the sector. Recent regulatory actions against certain centralized crypto companies have raised questions about potential implications for DeFi protocols, particularly those with more centralized governance structures.",
+    content: "Decentralized finance (DeFi) protocols have experienced a significant increase in total value locked (TVL) over the past month. This growth suggests renewed confidence in the DeFi sector, with investors seeking alternatives to traditional financial services amidst global banking concerns.",
     image: "/defi-news.jpg",
-    author: "Hasan Güzeller",
+    author: "Ege Yavuz ",
     date: "June 8, 2023",
     category: "DeFi",
-    readTime: "5 min read"
+    readTime: "3 min read"
   },
   {
     id: 'news-5',
     title: "NFT Market Shows Signs of Recovery After Year-Long Slump",
-    content: "The non-fungible token (NFT) market is showing signs of recovery after a prolonged downturn. Trading volumes have increased, and new projects are attracting attention. Experts attribute this revival to innovations in utility-focused NFTs and increased integration with gaming and metaverse platforms.\n\nAfter reaching peak trading volumes in 2021 and early 2022, the NFT market experienced a significant correction, with prices and trading activity declining sharply. However, recent data indicates a potential turnaround, with trading volumes increasing for the first time in several quarters.\n\nThis revival appears to be driven by a shift in the market toward utility-focused NFTs rather than purely speculative art pieces. Projects offering tangible benefits, such as access to exclusive communities, real-world events, or in-game advantages, are seeing the strongest growth.\n\nGaming and metaverse applications continue to be the most promising use cases for NFTs. Major game developers are increasingly incorporating NFT technology, allowing players to truly own their in-game assets and potentially transfer them between compatible games.\n\nInstitutional interest has also contributed to the market's recovery. Major brands continue to experiment with NFTs for customer engagement and loyalty programs, bringing mainstream attention and new users to the space.",
+    content: "The non-fungible token (NFT) market is showing signs of recovery after a prolonged downturn. Trading volumes have increased, and new projects are attracting attention. Experts attribute this revival to innovations in utility-focused NFTs and increased integration with gaming and metaverse platforms.",
     image: "/nft-news.jpg",
-    author: "Efe Turgut",
+    author: "Yılmaz Coşkun",
     date: "June 12, 2023",
     category: "NFTs",
     readTime: "4 min read"
@@ -71,9 +71,9 @@ const newsItems: NewsItem[] = [
   {
     id: 'news-6',
     title: "Central Banks Accelerate CBDC Development Worldwide",
-    content: "Central banks around the world are accelerating their research and development of Central Bank Digital Currencies (CBDCs). This trend reflects growing recognition of the importance of digital assets in the future of finance, with several major economies planning pilot programs in the coming months.\n\nThe pace of CBDC development has increased significantly over the past year, with over 80% of central banks now actively researching or developing digital currencies. China continues to lead with its Digital Yuan, which has already been tested by millions of users across multiple cities.\n\nThe European Central Bank has intensified its work on a digital euro, moving from research to a more active development phase. Similarly, the Federal Reserve in the United States has expanded its research efforts, although it maintains a more cautious approach compared to other major economies.\n\nMotivations for CBDC development vary across countries but commonly include enhancing payment system efficiency, promoting financial inclusion, and maintaining monetary sovereignty in an increasingly digital world. Some central banks also view CBDCs as a way to counter the growing influence of private cryptocurrencies and stablecoins.\n\nConcerns about privacy, security, and potential disruption to existing banking systems remain significant challenges. Central banks are exploring various technological approaches and governance structures to address these concerns while delivering the benefits of digital currencies.",
+    content: "Central banks around the world are accelerating their research and development of Central Bank Digital Currencies (CBDCs). This trend reflects growing recognition of the importance of digital assets in the future of finance, with several major economies planning pilot programs in the coming months.",
     image: "/cbdc-news.jpg",
-    author: "Hasan Güzeller",
+    author: "Leonardo da Vinci",
     date: "June 15, 2023",
     category: "CBDCs",
     readTime: "5 min read"

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { IoArrowUp, IoClose } from 'react-icons/io5';
 import { IoMdRefresh } from 'react-icons/io';
-import { FaRobot, FaBitcoin } from 'react-icons/fa';
+import Image from 'next/image';
 import ChatMessage, { Message } from './ChatMessage';
 import { sendMessageToGemini, formatMessagesForGemini } from '@/services/geminiService';
 
@@ -141,8 +141,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ isOpen, onClose, initialM
       {/* Header */}
       <div className="bg-gradient-to-r from-[#1a1c25] to-[#242736] py-3 px-4 flex items-center justify-between border-b border-gray-700 shadow-md">
         <div className="flex items-center">
-          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center mr-3 shadow-lg">
-            <FaBitcoin className="text-white" size={16} />
+          <div className="h-8 w-8 rounded-full overflow-hidden flex items-center justify-center mr-3 shadow-lg">
+            <Image src="/QAI bot.jpeg" alt="QAI Assistant" width={32} height={32} className="w-full h-full object-cover" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-white">Opus Kripto Asistanı</h2>
@@ -185,8 +185,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ isOpen, onClose, initialM
           {isLoading && (
             <div className="flex justify-start mb-4">
               <div className="flex">
-                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-purple-500 flex items-center justify-center mr-3">
-                  <FaRobot size={14} className="text-white" />
+                <div className="flex-shrink-0 h-8 w-8 rounded-full overflow-hidden flex items-center justify-center mr-3">
+                  <Image src="/QAI bot.jpeg" alt="QAI Assistant" width={32} height={32} className="w-full h-full object-cover" />
                 </div>
                 <div className="bg-[#272b3b] text-white p-3 rounded-lg flex items-center">
                   <div className="flex space-x-2">

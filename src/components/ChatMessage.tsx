@@ -1,7 +1,8 @@
 import React from 'react';
-import { FaRobot, FaUser } from 'react-icons/fa';
+import { FaUser } from 'react-icons/fa';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Image from 'next/image';
 
 export interface Message {
   id: string;
@@ -26,8 +27,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   return (
     <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className={`flex max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'} items-end`}>
-        <div className={`flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center ${isUser ? 'ml-3 mr-0 bg-gradient-to-br from-blue-500 to-blue-600' : 'mr-3 bg-gradient-to-br from-purple-500 to-purple-600'} shadow-md`}>
-          {isUser ? <FaUser size={15} className="text-white" /> : <FaRobot size={15} className="text-white" />}
+        <div className={`flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center ${isUser ? 'ml-3 mr-0 bg-gradient-to-br from-blue-500 to-blue-600' : 'mr-3 overflow-hidden'} shadow-md`}>
+          {isUser ? 
+            <FaUser size={15} className="text-white" /> : 
+            <Image src="/QAI bot.jpeg" alt="QAI Assistant" width={36} height={36} className="w-full h-full object-cover" />
+          }
         </div>
         
         <div 

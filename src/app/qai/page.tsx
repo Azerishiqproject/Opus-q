@@ -5,6 +5,7 @@ import { FaBitcoin, FaEthereum } from 'react-icons/fa';
 import { SiLitecoin, SiRipple, SiBinance, SiDogecoin, SiPolkadot, SiCardano } from 'react-icons/si';
 import { HiMenuAlt2 } from 'react-icons/hi';
 import { IoBook, IoArrowUp } from 'react-icons/io5';
+import Image from 'next/image';
 import Portfolio from '@/components/Portfolio';
 import { SidebarContext } from '@/app/ClientLayout';
 import { IconType } from 'react-icons';
@@ -13,7 +14,6 @@ import MiniChart from '@/components/MiniChart';
 import ChatMessage, { Message } from '@/components/ChatMessage';
 import { sendMessageToGemini, formatMessagesForGemini } from '@/services/geminiService';
 import { v4 as uuidv4 } from 'uuid';
-import { FaRobot} from 'react-icons/fa';
 
 interface CryptoCardProps {
   icon: IconType | React.ReactNode;
@@ -25,6 +25,7 @@ interface CryptoCardProps {
   trend: 'up' | 'down';
   priceChangePercentage: number;
   chartData: number[];
+  id: string;
 }
 
 const QAIPage = () => {
@@ -119,6 +120,7 @@ const QAIPage = () => {
         });
 
         return {
+          id: coin.id,
           name: coin.name,
           symbol: coin.symbol.toUpperCase(),
           icon: getCoinIcon(coin.symbol),
@@ -273,21 +275,6 @@ const QAIPage = () => {
         <Portfolio 
           isOpen={isPortfolioOpen} 
           onClose={() => setIsPortfolioOpen(false)}
-          portfolioItems={coins?.slice(0, 5).map(coin => {
-            const priceChangePercentage = coin.price_change_percentage_24h;
-            const isPositive = priceChangePercentage >= 0;
-            
-            return {
-              name: coin.name,
-              icon: getCoinIcon(coin.symbol) as IconType,
-              bgColor: getCoinColor(coin.symbol),
-              price: `$${coin.current_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-              percentChange: `${Math.abs(priceChangePercentage).toFixed(2)}%`,
-              isPositive,
-              amount: `${(Math.random() * 2 + 0.1).toFixed(4)}`,
-              symbol: coin.symbol.toUpperCase()
-            };
-          }) || []}
         />
       </div>
 
@@ -350,8 +337,8 @@ const QAIPage = () => {
                 {/* Chat header with exit button */}
                 <div className="flex justify-between items-center mb-6">
                   <div className="flex items-center">
-                    <div className="h-10 w-10 rounded-full bg-purple-500 flex items-center justify-center mr-3">
-                      <FaRobot className="text-white" size={20} />
+                    <div className="h-10 w-10 rounded-full overflow-hidden flex items-center justify-center mr-3">
+                      <Image src="/QAI bot.jpeg" alt="QAI Assistant" width={36} height={36} className="w-full h-full object-cover" />
                     </div>
                     <h2 className="text-xl font-semibold text-white">Sohbet Asistanı</h2>
                   </div>
@@ -374,8 +361,8 @@ const QAIPage = () => {
                   {isLoading && (
                     <div className="flex justify-start mb-4">
                       <div className="flex">
-                        <div className="flex-shrink-0 h-9 w-9 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mr-3 shadow-md">
-                          <FaRobot size={15} className="text-white" />
+                        <div className="flex-shrink-0 h-9 w-9 rounded-full overflow-hidden flex items-center justify-center mr-3 shadow-md">
+                          <Image src="/QAI bot.jpeg" alt="QAI Assistant" width={36} height={36} className="w-full h-full object-cover" />
                         </div>
                         <div className="bg-[#1E2030] text-white p-4 rounded-2xl shadow-md border border-gray-700/30 rounded-bl-sm">
                           <div className="flex items-center space-x-2">
@@ -442,7 +429,7 @@ const QAIPage = () => {
                         <div className="flex items-center flex-1 justify-end">
                           <div className="mr-4 w-24 h-8 flex justify-end">
                             <MiniChart 
-                              data={crypto.chartData} 
+                              coinId={crypto.id}
                               isPositive={crypto.trend === 'up'}
                               width={96} 
                               height={32}

@@ -2,7 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 // CoinGecko API ücretsiz sürümü dakikada 10-50 istek limiti sunar
 // API key'i .env dosyasından al
-const API_URL = process.env.NEXT_PUBLIC_COINGECKO_API_URL || 'https://api.coingecko.com/api/v3';
+const API_URL = process.env.NEXT_PUBLIC_COINGECKO_API_URL || '/api/coingecko';
 const API_KEY = process.env.NEXT_PUBLIC_COINGECKO_API_KEY || '';
 
 // API istekleri için parametreleri hazırlama
@@ -11,6 +11,10 @@ const prepareHeaders = (headers: Headers) => {
   if (API_KEY) {
     headers.set('x-cg-pro-api-key', API_KEY);
   }
+  
+  // CORS için ek header'lar
+  headers.set('Accept', 'application/json');
+  
   return headers;
 };
 
@@ -43,6 +47,21 @@ export interface Coin {
   price_change_percentage_1h_in_currency?: number;
   price_change_percentage_24h_in_currency?: number;
   price_change_percentage_7d_in_currency?: number;
+}
+
+// Simple coin interface for search results
+export interface CoinSearchResult {
+  id: string;
+  name: string;
+  symbol: string;
+  market_cap_rank: number;
+  thumb: string;
+  large: string;
+}
+
+// Search API response
+interface SearchResponse {
+  coins: CoinSearchResult[];
 }
 
 // Define interfaces for CoinGecko API responses
@@ -121,7 +140,9 @@ export const coinApi = createApi({
   reducerPath: 'coinApi',
   baseQuery: fetchBaseQuery({ 
     baseUrl: API_URL,
-    prepareHeaders
+    prepareHeaders,
+    mode: 'cors',
+    credentials: 'same-origin'
   }),
   // CoinGecko API'nin istek sınırları nedeniyle, önbelleğe alma ve refetch stratejisi
   keepUnusedDataFor: 300, // verileri 5 dakika önbellekte tut
@@ -144,6 +165,19 @@ export const coinApi = createApi({
       // Otomatik yeniden getirme stratejisi
       // İstek sınırlarını aşmamak için 60 saniyede bir yenileme
       keepUnusedDataFor: 60, // verileri 60 saniye önbellekte tut
+    }),
+    // Search for coins by keyword
+    searchCoins: builder.query<CoinSearchResult[], string>({
+      query: (query) => ({
+        url: '/search',
+        params: {
+          query
+        }
+      }),
+      transformResponse: (response: SearchResponse) => {
+        return response.coins;
+      },
+      keepUnusedDataFor: 60, // 1 minute cache
     }),
     getCoinById: builder.query<Coin, string>({
       query: (id) => ({
@@ -209,5 +243,6 @@ export const coinApi = createApi({
 export const { 
   useGetCoinsQuery, 
   useGetCoinByIdQuery,
-  useGetCoinPriceHistoryQuery
+  useGetCoinPriceHistoryQuery,
+  useSearchCoinsQuery
 } = coinApi; 
