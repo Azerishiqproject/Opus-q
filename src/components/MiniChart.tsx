@@ -9,20 +9,34 @@ interface MiniChartProps {
   height?: number;
 }
 
-// Global cache for storing price data to reduce API calls
-const priceCache: Record<string, {
-  data: number[],
-  timestamp: number
-}> = {};
-
-// Cache validity duration in milliseconds (20 minutes to reduce API calls)
+// Cache with a 20 minute validity
 const CACHE_DURATION = 20 * 60 * 1000;
+const priceCache: Record<string, { data: number[], timestamp: number }> = {};
 
-// Queue for API requests to avoid rate limiting
-const requestQueue: (() => void)[] = [];
-let isProcessingQueue = false;
+// Rate limiting management
 let hasRateLimitError = false;
 let rateLimitResetTime = 0;
+
+// Request queue management
+let requestQueue: (() => void)[] = [];
+let isProcessingQueue = false;
+
+// Process requests with delay to avoid rate limits
+function processQueue() {
+  if (requestQueue.length === 0) {
+    isProcessingQueue = false;
+    return;
+  }
+  
+  isProcessingQueue = true;
+  const request = requestQueue.shift();
+  
+  if (request) {
+    request();
+    // Wait 1 second between requests to avoid rate limits
+    setTimeout(processQueue, 1000);
+  }
+}
 
 // Fallback demo data for charts
 const getDemoData = (isPositive: boolean): number[] => {
@@ -35,62 +49,43 @@ const getDemoData = (isPositive: boolean): number[] => {
   });
 };
 
-// Process requests with delay to prevent rate limiting
-const processQueue = () => {
-  if (requestQueue.length === 0) {
-    isProcessingQueue = false;
-    return;
-  }
-
-  // If we hit a rate limit, wait until reset time before trying more requests
-  if (hasRateLimitError && Date.now() < rateLimitResetTime) {
-    // Check again in 10 seconds
-    setTimeout(() => {
-      processQueue();
-    }, 10000);
-    return;
-  }
-
-  isProcessingQueue = true;
-  const request = requestQueue.shift();
-  
-  if (request) {
-    request();
-    // Wait 3 seconds between requests to avoid rate limiting
-    setTimeout(() => {
-      processQueue();
-    }, 3000);
-  }
-};
-
+// MiniChart component
 const MiniChart: React.FC<MiniChartProps> = ({
   coinId,
   isPositive = true,
-  width = 80,
+  width = 120,
   height = 30,
 }) => {
   const [chartData, setChartData] = useState<number[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const requestedRef = useRef(false);
+  const currentCoinIdRef = useRef(coinId);
   
-  // Always show demo data immediately to avoid blank charts
+  // Generate some demo data to show immediately
   useEffect(() => {
-    setChartData(getDemoData(isPositive)); 
+    // Reset the request flag when coin changes
+    if (currentCoinIdRef.current !== coinId) {
+      requestedRef.current = false;
+      currentCoinIdRef.current = coinId;
+    }
+    
+    // Always generate demo data for immediate display
+    const demoData = getDemoData(isPositive);
+    setChartData(demoData);
     setIsLoadingData(false);
-  }, [isPositive]);
+  }, [coinId, isPositive]);
   
   // Then try to fetch real data if possible
   useEffect(() => {
-    // Reset request flag when coin changes
-    requestedRef.current = false;
-    
     // If coinId is undefined or invalid, just keep using demo data
     if (!coinId || coinId === 'undefined') {
+      console.log(`Invalid coinId for MiniChart: ${coinId}`);
       return;
     }
     
     // If we're currently rate limited, don't even try to fetch
     if (hasRateLimitError && Date.now() < rateLimitResetTime) {
+      console.log(`Rate limited, using demo data for ${coinId}`);
       return;
     }
     
@@ -99,35 +94,46 @@ const MiniChart: React.FC<MiniChartProps> = ({
     
     if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
       // Use cached data
+      console.log(`Using cached data for ${coinId}`);
       setChartData(cachedData.data);
-    } else {
-      // Queue the fetch if not already requested
-      if (!requestedRef.current) {
-        requestedRef.current = true;
+      return;
+    }
+    
+    // Queue the fetch if not already requested
+    if (!requestedRef.current) {
+      requestedRef.current = true;
+      
+      const fetchRequest = () => {
+        // Construct API URL carefully
+        const apiUrl = `/api/coingecko/coins/${encodeURIComponent(coinId)}/market_chart?vs_currency=usd&days=1`;
+        console.log(`Fetching chart data for ${coinId} from: ${apiUrl}`);
         
-        const fetchRequest = () => {
-          // Fetch from API proxy
-          fetch(`/api/coingecko/coins/${coinId}/market_chart?vs_currency=usd&days=1`)
-            .then(response => {
-              if (response.status === 429) {
-                // Set rate limit flag
-                hasRateLimitError = true;
-                // Reset after 1 hour if no header info
-                const resetAfter = response.headers.get('Retry-After') 
-                  ? parseInt(response.headers.get('Retry-After') || '3600') * 1000 
-                  : 3600 * 1000;
-                rateLimitResetTime = Date.now() + resetAfter;
-                throw new Error('Rate limit exceeded');
-              }
+        // Fetch from API proxy
+        fetch(apiUrl)
+          .then(response => {
+            if (response.status === 429) {
+              // Set rate limit flag
+              hasRateLimitError = true;
+              // Reset after 1 hour if no header info
+              const resetAfter = response.headers.get('Retry-After') 
+                ? parseInt(response.headers.get('Retry-After') || '3600') * 1000 
+                : 3600 * 1000;
+              rateLimitResetTime = Date.now() + resetAfter;
+              console.warn(`Rate limit exceeded for ${coinId}, retry after ${resetAfter}ms`);
+              throw new Error('Rate limit exceeded');
+            }
+            
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then(data => {
+            if (data && data.prices && Array.isArray(data.prices)) {
+              const prices = data.prices.map((item: [number, number]) => item[1]);
               
-              if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-              }
-              return response.json();
-            })
-            .then(data => {
-              if (data && data.prices) {
-                const prices = data.prices.map((item: [number, number]) => item[1]);
+              if (prices.length > 0) {
+                console.log(`Successfully fetched ${prices.length} data points for ${coinId}`);
                 
                 // Update the cache
                 priceCache[cacheKey] = {
@@ -135,23 +141,36 @@ const MiniChart: React.FC<MiniChartProps> = ({
                   timestamp: Date.now()
                 };
                 
-                setChartData(prices);
+                // Only update if this is still the current coin
+                if (currentCoinIdRef.current === coinId) {
+                  setChartData(prices);
+                }
+              } else {
+                console.warn(`Received empty price data for ${coinId}`);
+                throw new Error('Empty price data');
               }
-            })
-            .catch(error => {
-              console.error(`Error fetching data for ${coinId}:`, error);
-              
-              // Already using demo data, no need to set again
-            });
-        };
-        
-        requestQueue.push(fetchRequest);
-        
-        if (!isProcessingQueue) {
-          processQueue();
-        }
+            } else {
+              console.warn(`Invalid data format for ${coinId}:`, data);
+              throw new Error('Invalid data format');
+            }
+          })
+          .catch(error => {
+            console.error(`Error fetching data for ${coinId}:`, error);
+            // Keep using demo data on error, already set
+          });
+      };
+      
+      requestQueue.push(fetchRequest);
+      
+      if (!isProcessingQueue) {
+        processQueue();
       }
     }
+    
+    // Clean up function
+    return () => {
+      // Don't reset requestedRef here, as it would cause duplicate requests
+    };
   }, [coinId, isPositive]);
   
   // Veri yoksa veya yükleniyor ise düz çizgi göster

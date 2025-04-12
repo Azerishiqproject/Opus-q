@@ -2,7 +2,6 @@
 
 import { FaBitcoin, FaEthereum } from 'react-icons/fa';
 import { SiLitecoin, SiBinance, SiSolana } from 'react-icons/si';
-import { HiSearch, HiBell } from 'react-icons/hi';
 import dynamic from 'next/dynamic';
 import { useGetCoinsQuery } from '@/redux/services/coinApi';
 import Image from 'next/image';
@@ -17,6 +16,7 @@ import { fetchUserPortfolio } from '@/redux/slices/portfolioSlice';
 import { RootState, AppDispatch } from '@/redux/store';
 import MiniChart from '@/components/MiniChart';
 import { useState, useRef, useEffect } from 'react';
+import Navbar from '@/components/Navbar';
 
 // Dynamic import of chart component with SSR disabled
 const CryptoChart = dynamic(() => import('@/components/CryptoChart'), { ssr: false });
@@ -112,38 +112,11 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[#21232d]">
       {/* Header */}
-      <header className="bg-[#21232d] p-5 flex items-center justify-between border-b border-[#272b3b]">
-        <div className="flex items-center">
-          <h1 className="text-white text-2xl font-bold">Dashboard</h1>
-        </div>
-
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search..."
-              className="bg-[#272b3b] text-gray-300 rounded-[10px] p-4 py-1.5 pl-10 w-[400px] focus:outline-none text-base"
-            />
-            <HiSearch className="absolute left-3 top-3 text-gray-500" size={16} />
-          </div>
-        </div>
-        
-        <div className="flex items-center space-x-4">
-          <button className="p-2 bg-[#272b3b] rounded-[10px] relative">
-            <HiBell className="text-gray-400" size={20} />
-          </button>
-          
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gray-400 rounded-[10px]"></div>
-            <div className="text-white">
-              <span className="text-base">Wizard Labs</span>
-              <svg className="inline-block ml-2 w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Navbar 
+        title="Dashboard" 
+        showSearch={true}
+        searchPlaceholder="Search coins..."
+      />
       
       <div className="p-6 space-y-6">
         {/* Crypto cards */}

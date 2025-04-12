@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { HiBell } from 'react-icons/hi';
 import { FaBitcoin, FaEthereum } from 'react-icons/fa';
 import { SiLitecoin, SiSolana, SiBinance, SiRipple, SiCardano, SiPolkadot } from 'react-icons/si';
 import {  RiArrowUpDownLine } from 'react-icons/ri';
@@ -12,6 +11,7 @@ import { IconType } from 'react-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchUserPortfolio } from '@/redux/slices/portfolioSlice';
 import { RootState, AppDispatch } from '@/redux/store';
+import Navbar from '@/components/Navbar';
 
 // Define interfaces for our data structures
 interface CoinData {
@@ -469,50 +469,20 @@ const Transactions = () => {
 
   return (
     <div className="min-h-screen bg-[#21232d]">
+      {/* Header */}
+      <Navbar 
+        title="Transactions" 
+        showSearch={true}
+        searchPlaceholder="Search coins..."
+      />
+      
       {/* Video Overlay */}
       <VideoLoadingOverlay 
         isVisible={showVideoOverlay}
         onFinished={handleVideoFinished}
       />
       
-      {/* Header */}
-      <header className="bg-[#21232d] p-5 flex items-center justify-between border-b border-[#272b3b]">
-        <div className="flex items-center">
-          <h1 className="text-white text-2xl font-bold">Transactions</h1>
-        </div>
-
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search..."
-              className="bg-[#121319] text-gray-300 rounded-xl py-2 pl-10 pr-4 w-[280px] focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm border border-[#272b3b]"
-            />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex items-center space-x-4">
-          <button className="p-2 bg-[#272b3b] rounded-[10px] relative">
-            <HiBell className="text-gray-400" size={20} />
-          </button>
-          
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gray-400 rounded-[10px]"></div>
-            <div className="text-white">
-              <span className="text-base">Wizard Labs</span>
-              <svg className="inline-block ml-2 w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </header>
-      
+      {/* Main content */}
       <div className="p-6 space-y-6">
         <div className="flex gap-6">
           <div className="w-2/3 space-y-6">
