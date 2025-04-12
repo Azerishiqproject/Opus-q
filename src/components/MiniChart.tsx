@@ -18,7 +18,7 @@ let hasRateLimitError = false;
 let rateLimitResetTime = 0;
 
 // Request queue management
-let requestQueue: (() => void)[] = [];
+const requestQueue: (() => void)[] = [];
 let isProcessingQueue = false;
 
 // Process requests with delay to avoid rate limits

@@ -11,6 +11,12 @@ interface GeminiMessage {
   parts: { text: string }[];
 }
 
+// Content type for API requests
+interface GeminiContent {
+  role: 'user' | 'model';
+  parts: { text: string }[];
+}
+
 // Kripto ve finans botunun sistem yönergesi
 const SYSTEM_PROMPT = `Sen Opus-Q isimli kripto para ve finans platformunun yapay zeka asistanısın. 
 Adın Opus. Kullanıcılara kripto paralar, blockchain teknolojisi, yatırım stratejileri ve finans konularında yardımcı oluyorsun.
@@ -82,7 +88,7 @@ export async function sendMessageToGemini(messages: GeminiMessage[]): Promise<st
     const lastMessage = messages[messages.length - 1];
     
     // Prepare content for generation
-    const content: any[] = [];
+    const content: GeminiContent[] = [];
     
     // First add system prompt as a separate content block
     content.push({
@@ -128,13 +134,13 @@ export async function sendMessageToGemini(messages: GeminiMessage[]): Promise<st
         console.error('Gemini API: No response text returned', response);
         return "Yanıt oluşturulamadı. Lütfen daha sonra tekrar deneyin.";
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error generating content:', error);
       
       // Fallback to simple message if content approach fails
       try {
         // Create a simpler prompt that includes just system prompt and last message
-        const simpleContent = [
+        const simpleContent: GeminiContent[] = [
           {
             role: "user",
             parts: [{ text: `${SYSTEM_PROMPT}\n\nÖnceki konuşma: 
@@ -163,12 +169,12 @@ export async function sendMessageToGemini(messages: GeminiMessage[]): Promise<st
         } else {
           return "Yanıt oluşturulamadı. Lütfen daha sonra tekrar deneyin.";
         }
-      } catch (fallbackError) {
+      } catch (fallbackError: unknown) {
         console.error('Error in fallback approach:', fallbackError);
         return "Bir hata oluştu. Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin.";
       }
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error sending message to Gemini:', error);
     return "Bir hata oluştu. Lütfen internet bağlantınızı kontrol edin ve tekrar deneyin.";
   }

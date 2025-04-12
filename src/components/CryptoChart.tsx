@@ -47,17 +47,7 @@ const timeRangeToDay = (timeRange: string): string => {
   }
 };
 
-// API URL'de kullanmak için özel parametre
-const getCustomParams = (timeRange: string): string => {
-  switch (timeRange) {
-    case '1h': return '&interval=minutely';
-    case '4h': return '&interval=minutely';
-    case '12h': return '&interval=minutely';
-    case '1d': return '&interval=hourly';
-    case '1w': return '&interval=daily';
-    default: return '&interval=hourly';
-  }
-};
+
 
 // X ekseni zaman etiketleri için interval hesaplama
 const getTimeIntervalForRange = (timeRange: string, timestamp: Date): string => {

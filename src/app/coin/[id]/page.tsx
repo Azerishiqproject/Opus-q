@@ -4,7 +4,7 @@ import { FaArrowLeft, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { useGetCoinByIdQuery } from '@/redux/services/coinApi';
 import Navbar from '@/components/Navbar';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useState } from 'react';
 import * as React from 'react';
 import dynamic from 'next/dynamic';
@@ -12,14 +12,15 @@ import dynamic from 'next/dynamic';
 // Dynamic import of chart component with SSR disabled
 const CryptoChart = dynamic(() => import('@/components/CryptoChart'), { ssr: false });
 
-export default function CoinDetail({ params }: { params: { id: string } | Promise<{ id: string }> }) {
-  // Safely access the id parameter, handling both current and future Next.js versions
-  const coinId = params instanceof Promise ? React.use(params).id : params.id;
+export default function CoinDetail() {
+  const params = useParams();
+  const id = params?.id as string;
+  
   const router = useRouter();
   const [timeRange, setTimeRange] = useState('1d');
   
   // Fetch coin details
-  const { data: coin, isLoading, error } = useGetCoinByIdQuery(coinId);
+  const { data: coin, isLoading, error } = useGetCoinByIdQuery(id);
   
   const handleTimeRangeChange = (range: string) => {
     setTimeRange(range);

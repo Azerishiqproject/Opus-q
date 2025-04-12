@@ -95,19 +95,7 @@ const chartData: {
   }
 };
 
-// Static fallback data in case of API failure
-const staticPortfolioData = [
-  { symbol: 'BTC', balance: '2.31', fiatValue: '$75,183.00', change: '1.2%', trend: 'up' as const },
-  { symbol: 'ETH', balance: '15.48', fiatValue: '$31,245.76', change: '0.8%', trend: 'up' as const },
-  { symbol: 'SOL', balance: '132.5', fiatValue: '$18,947.50', change: '2.3%', trend: 'down' as const },
-  { symbol: 'BNB', balance: '41.32', fiatValue: '$12,354.68', change: '0.5%', trend: 'up' as const },
-  { symbol: 'AVAX', balance: '210.45', fiatValue: '$4,893.84', change: '1.1%', trend: 'down' as const },
-  { symbol: 'DOT', balance: '562.1', fiatValue: '$3,248.93', change: '0.7%', trend: 'up' as const },
-  { symbol: 'ADA', balance: '3125.8', fiatValue: '$2,781.96', change: '1.5%', trend: 'down' as const },
-  { symbol: 'MATIC', balance: '4582.6', fiatValue: '$2,382.95', change: '2.1%', trend: 'up' as const },
-  { symbol: 'LINK', balance: '187.2', fiatValue: '$2,246.40', change: '0.9%', trend: 'down' as const },
-  { symbol: 'DOGE', balance: '12857.4', fiatValue: '$1,157.17', change: '1.8%', trend: 'up' as const }
-];
+
 
 export default function Wallet() {
   const dispatch = useDispatch<AppDispatch>();
@@ -223,7 +211,6 @@ export default function Wallet() {
       
       // Calculate total portfolio value based on all coins - use raw values directly
       let totalPortfolioValue = 0;
-      let totalPortfolioChange = 0;
       let totalPortfolioChangeAmount = 0;
       let totalPortfolioPreviousValue = 0;
       
@@ -274,23 +261,6 @@ export default function Wallet() {
     }
   }, [coins, coinError, isCoinsLoading, portfolioItems, portfolioStatus, portfolioError, itemsPerPage]);
   
-  // Helper to get coin names from symbols for static data
-  const getCoinNameFromSymbol = (symbol: string): string => {
-    const coinNames: {[key: string]: string} = {
-      'BTC': 'Bitcoin',
-      'ETH': 'Ethereum',
-      'SOL': 'Solana',
-      'BNB': 'Binance Coin',
-      'AVAX': 'Avalanche',
-      'DOT': 'Polkadot',
-      'ADA': 'Cardano',
-      'MATIC': 'Polygon',
-      'LINK': 'Chainlink',
-      'DOGE': 'Dogecoin'
-    };
-    
-    return coinNames[symbol] || symbol;
-  };
   
   // Handle pagination
   const handlePrevPage = () => {

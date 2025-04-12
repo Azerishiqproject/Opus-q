@@ -158,6 +158,7 @@ const Transactions = () => {
     from: { symbol: 'BTC', amount: '1.0' },
     to: { symbol: 'USD', amount: '40,455.25' }
   });
+  const [fromAmount, setFromAmount] = useState('1.0');
   const [showCryptoDropdown, setShowCryptoDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [activeExchangeTab, setActiveExchangeTab] = useState('exchange');
@@ -338,19 +339,8 @@ const Transactions = () => {
     }));
     setShowCryptoDropdown(false);
     
-    // Seçilen kripto para birimine göre değeri güncelle
-    if (coins) {
-      const selectedCoin = coins.find(coin => coin.symbol.toUpperCase() === crypto);
-      if (selectedCoin) {
-        const newAmount = '1.0';
-        const newValue = (selectedCoin.current_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        
-        setExchangeCoin({
-          from: { symbol: crypto, amount: newAmount },
-          to: { symbol: 'USD', amount: newValue }
-        });
-      }
-    }
+    // Update exchange rate based on selected crypto
+    updateExchangeRate(crypto, exchangeCoin.to.symbol, fromAmount);
   };
 
   const handleCurrencySelect = (currency: string) => {
@@ -359,17 +349,96 @@ const Transactions = () => {
       to: { ...prev.to, symbol: currency }
     }));
     setShowCurrencyDropdown(false);
+    
+    // Update exchange rate based on selected currency
+    updateExchangeRate(exchangeCoin.from.symbol, currency, fromAmount);
+  };
+
+  const handleFromAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Allow only numbers and one decimal point
+    const value = e.target.value;
+    if (/^\d*\.?\d*$/.test(value)) {
+      setFromAmount(value);
+      // Update the exchange rate
+      updateExchangeRate(exchangeCoin.from.symbol, exchangeCoin.to.symbol, value);
+    }
+  };
+
+  const updateExchangeRate = (fromSymbol: string, toSymbol: string, amount: string) => {
+    if (coins && amount) {
+      const coinData = coins.find(coin => coin.symbol.toUpperCase() === fromSymbol);
+      if (coinData) {
+        const valueInUSD = parseFloat(amount) * coinData.current_price;
+        
+        // If to currency is USD, use the value directly
+        if (toSymbol === 'USD') {
+          setExchangeCoin({
+            from: { symbol: fromSymbol, amount: amount },
+            to: { 
+              symbol: toSymbol, 
+              amount: valueInUSD.toLocaleString(undefined, { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+              })
+            }
+          });
+        } else {
+          // For other currencies, apply an exchange rate (simplified)
+          // In real app, you would fetch actual exchange rates
+          const exchangeRates = {
+            'EUR': 0.92,
+            'GBP': 0.78,
+            'JPY': 150.65,
+            'TRY': 34.23,
+            'USD': 1.0
+          };
+          
+          const valueInCurrency = valueInUSD * (exchangeRates[toSymbol as keyof typeof exchangeRates] || 1.0);
+          
+          setExchangeCoin({
+            from: { symbol: fromSymbol, amount: amount },
+            to: { 
+              symbol: toSymbol, 
+              amount: valueInCurrency.toLocaleString(undefined, { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+              })
+            }
+          });
+        }
+      }
+    }
   };
 
   const handleSwapCurrencies = () => {
-    setExchangeCoin(prev => ({
-      from: { ...prev.to, amount: prev.to.amount },
-      to: { ...prev.from, amount: prev.from.amount }
-    }));
+    // Only allow swapping if target currency is a crypto (not a fiat currency)
+    if (cryptos.includes(exchangeCoin.to.symbol)) {
+      const newFromSymbol = exchangeCoin.to.symbol;
+      const newToSymbol = exchangeCoin.from.symbol;
+      const newAmount = '1.0'; // Reset amount when swapping
+      
+      setFromAmount(newAmount);
+      setExchangeCoin({
+        from: { symbol: newFromSymbol, amount: newAmount },
+        to: { symbol: newToSymbol, amount: '0.00' }
+      });
+      
+      // Update exchange rate with new values
+      updateExchangeRate(newFromSymbol, newToSymbol, newAmount);
+    } else {
+      // Alert user that direct conversion to crypto is not available
+      alert('Direct conversion from fiat to crypto is not available. Please select a crypto first.');
+    }
   };
 
   const handleExchange = () => {
-    console.log(`Exchanging ${exchangeCoin.from.amount} ${exchangeCoin.from.symbol} to ${exchangeCoin.to.symbol}`);
+    console.log(`Exchanging ${exchangeCoin.from.amount} ${exchangeCoin.from.symbol} to ${exchangeCoin.to.amount} ${exchangeCoin.to.symbol}`);
+    
+    // Validate the amount
+    if (!fromAmount || parseFloat(fromAmount) <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
     
     // Show loading state and video overlay
     setIsExchangeLoading(true);
@@ -380,6 +449,8 @@ const Transactions = () => {
       setIsExchangeLoading(false);
       // Don't hide video overlay here, let the video finish or manual close
       alert(`Exchange successful: ${exchangeCoin.from.amount} ${exchangeCoin.from.symbol} → ${exchangeCoin.to.amount} ${exchangeCoin.to.symbol}`);
+      setFromAmount('1.0');
+      updateExchangeRate(exchangeCoin.from.symbol, exchangeCoin.to.symbol, '1.0');
     }, 2000);
   };
 
@@ -467,6 +538,58 @@ const Transactions = () => {
     }
   };
 
+  // Get exchange rate between currencies
+  const getExchangeRate = (fromSymbol: string, toSymbol: string) => {
+    if (!coins) return '0.00';
+    
+    const coinData = coins.find(coin => coin.symbol.toUpperCase() === fromSymbol);
+    if (!coinData) return '0.00';
+    
+    const valueInUSD = coinData.current_price;
+    
+    // If to currency is USD, use the value directly
+    if (toSymbol === 'USD') {
+      return valueInUSD.toLocaleString(undefined, { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      });
+    } else if (cryptos.includes(toSymbol)) {
+      // If converting to another crypto
+      const toCoinData = coins.find(coin => coin.symbol.toUpperCase() === toSymbol);
+      if (!toCoinData) return '0.00';
+      
+      const exchangeRate = valueInUSD / toCoinData.current_price;
+      return exchangeRate.toLocaleString(undefined, { 
+        minimumFractionDigits: 6, 
+        maximumFractionDigits: 6 
+      });
+    } else {
+      // For other fiat currencies, apply an exchange rate (simplified)
+      const exchangeRates = {
+        'EUR': 0.92,
+        'GBP': 0.78,
+        'JPY': 150.65,
+        'TRY': 34.23,
+        'USD': 1.0
+      };
+      
+      const exchangeRate = valueInUSD * (exchangeRates[toSymbol as keyof typeof exchangeRates] || 1.0);
+      return exchangeRate.toLocaleString(undefined, { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      });
+    }
+  };
+
+  // Update the exchange coin UI to show the correct rate
+  const getExchangeRateDisplay = () => {
+    if (cryptos.includes(exchangeCoin.to.symbol)) {
+      return `1 ${exchangeCoin.from.symbol} = ${getExchangeRate(exchangeCoin.from.symbol, exchangeCoin.to.symbol)} ${exchangeCoin.to.symbol}`;
+    } else {
+      return `1 ${exchangeCoin.from.symbol} = ${getExchangeRate(exchangeCoin.from.symbol, exchangeCoin.to.symbol)} ${exchangeCoin.to.symbol}`;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#21232d]">
       {/* Header */}
@@ -483,11 +606,11 @@ const Transactions = () => {
       />
       
       {/* Main content */}
-      <div className="p-6 space-y-6">
-        <div className="flex gap-6">
-          <div className="w-2/3 space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="w-full lg:w-2/3 space-y-6">
             {/* Coin Allocation Section */}
-            <div className="bg-[#121319] rounded-lg p-5 h-[468px] flex flex-col">
+            <div className="bg-[#121319] rounded-lg p-5 flex flex-col">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-white text-lg font-bold">Coin Allocation</h2>
                 
@@ -552,60 +675,64 @@ const Transactions = () => {
               
               {/* Loading state */}
               {isLoading && (
-                <div className="flex-1 flex items-center justify-center">
+                <div className="h-64 flex items-center justify-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                 </div>
               )}
               
               {/* Error state */}
               {error && (
-                <div className="flex-1 flex items-center justify-center text-red-500">
+                <div className="h-64 flex items-center justify-center text-red-500">
                   <p>Veri alınırken bir hata oluştu.</p>
                 </div>
               )}
               
               {/* Coin rows - Dinamik verilerle */}
-              {!isLoading && !error && coinAllocationData.map((coin, index) => {
-                const Icon = coin.icon as IconType;
-                return (
-                  <div key={index} className="grid grid-cols-6 gap-4 py-3 border-b border-gray-800 text-white text-sm">
-                    <div className="flex items-center">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3`} style={{ backgroundColor: coin.bgColor }}>
-                        {typeof coin.icon === 'function' ? (
-                          <Icon className="text-white" size={16} />
-                        ) : (
-                          coin.icon
-                        )}
-                      </div>
-                      <div>
-                        <div className="font-medium">{coin.coin}</div>
-                        <div className="text-xs text-gray-400">{coin.symbol}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center">{coin.inOrder}</div>
-                    <div className="flex flex-col">
-                      <div>{coin.price}</div>
-                      <div className="text-xs text-gray-400">{coin.price2}</div>
-                    </div>
-                    <div className="flex items-center">{coin.holdings} {coin.symbol}</div>
-                    <div className="flex flex-col">
-                      <div>{coin.total}</div>
-                      <div className="text-xs text-gray-400">{coin.total2}</div>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="flex flex-col">
-                        <div>{coin.profit}</div>
-                        <div className={`text-xs ${coin.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
-                          {coin.profitPercent}
+              {!isLoading && !error && (
+                <div className="overflow-y-auto max-h-[400px]">
+                  {coinAllocationData.map((coin, index) => {
+                    const Icon = coin.icon as IconType;
+                    return (
+                      <div key={index} className="grid grid-cols-6 gap-4 py-3 border-b border-gray-800 text-white text-sm">
+                        <div className="flex items-center">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3`} style={{ backgroundColor: coin.bgColor }}>
+                            {typeof coin.icon === 'function' ? (
+                              <Icon className="text-white" size={16} />
+                            ) : (
+                              coin.icon
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-medium">{coin.coin}</div>
+                            <div className="text-xs text-gray-400">{coin.symbol}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center">{coin.inOrder}</div>
+                        <div className="flex flex-col">
+                          <div>{coin.price}</div>
+                          <div className="text-xs text-gray-400">{coin.price2}</div>
+                        </div>
+                        <div className="flex items-center">{coin.holdings} {coin.symbol}</div>
+                        <div className="flex flex-col">
+                          <div>{coin.total}</div>
+                          <div className="text-xs text-gray-400">{coin.total2}</div>
+                        </div>
+                        <div className="flex items-center">
+                          <div className="flex flex-col">
+                            <div>{coin.profit}</div>
+                            <div className={`text-xs ${coin.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+                              {coin.profitPercent}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              )}
               
               {/* Pagination - Coin Allocation */}
-              <div className="flex items-center justify-between mt-auto pt-4">
+              <div className="flex items-center justify-between mt-4 pt-2 border-t border-gray-800">
                 <div className="text-gray-400 text-xs">52 assets</div>
                 <div className="flex items-center space-x-2">
                   <button 
@@ -639,7 +766,7 @@ const Transactions = () => {
             </div>
             
             {/* Transaction History Section */}
-            <div className="bg-[#121319] rounded-lg p-5 h-[468px] flex flex-col">
+            <div className="bg-[#121319] rounded-lg p-5 flex flex-col">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-white text-lg font-bold">Transaction History</h2>
                 
@@ -713,16 +840,16 @@ const Transactions = () => {
               
               {/* İçeriği dinamik verilerle yenile */}
               {isLoading ? (
-                <div className="flex-1 flex items-center justify-center">
+                <div className="h-64 flex items-center justify-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                 </div>
               ) : error ? (
-                <div className="flex-1 flex items-center justify-center text-red-500">
+                <div className="h-64 flex items-center justify-center text-red-500">
                   <p>İşlem geçmişi alınırken bir hata oluştu.</p>
                 </div>
               ) : (
                 // Dinamik verilerle transaction history
-                <div className="mt-4 flex-1 overflow-auto">
+                <div className="overflow-y-auto max-h-[400px]">
                   {transactionHistoryData.map((item, index) => {
                     const Icon = item.icon as IconType;
                     return (
@@ -759,7 +886,7 @@ const Transactions = () => {
               )}
               
               {/* Pagination - Transaction History */}
-              <div className="flex items-center justify-between mt-auto pt-4">
+              <div className="flex items-center justify-between mt-4 pt-2 border-t border-gray-800">
                 <div className="text-gray-400 text-xs">48 transactions</div>
                 <div className="flex items-center space-x-2">
                   <button 
@@ -793,9 +920,9 @@ const Transactions = () => {
             </div>
           </div>
           
-          <div className="w-1/3 space-y-6">
+          <div className="w-full lg:w-1/3 space-y-6">
             {/* Exchange Coin */}
-            <div className="bg-[#121319] rounded-lg p-5 h-[468px] flex flex-col">
+            <div className="bg-[#121319] rounded-lg p-5 flex flex-col">
               {/* Exchange Coin Tabs */}
               <div className="flex text-sm mb-5 border-b border-gray-700">
                 <button 
@@ -818,7 +945,7 @@ const Transactions = () => {
               
               {/* Exchange or Buy/Sell Form based on active tab */}
               {activeExchangeTab === 'exchange' ? (
-                <div className="space-y-4 flex-grow flex flex-col">
+                <div className="space-y-4 flex-grow flex flex-col overflow-y-auto">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center">
                       <div className="w-8 h-8 bg-gray-600 flex items-center justify-center rounded-full mr-3">
@@ -838,7 +965,15 @@ const Transactions = () => {
                     <div className="flex justify-between items-center mb-1">
                       <div className="flex items-center flex-col">
                           <div className="text-gray-400 text-xs">Coin</div>
-                          <div className="text-white text-sm">{exchangeCoin.from.amount}</div>
+                          <div className="flex items-center mt-1">
+                            <input
+                              type="text"
+                              value={fromAmount}
+                              onChange={handleFromAmountChange}
+                              placeholder="0.00"
+                              className="bg-transparent border-none outline-none text-white text-sm w-20 p-0"
+                            />
+                          </div>
                       </div>
                       <div className="relative">
                         <button 
@@ -916,6 +1051,16 @@ const Transactions = () => {
                     </div>
                   </div>
                   
+                  {/* Exchange Rate Display */}
+                  <div className="bg-[#272b3b] rounded-lg p-3 mt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400 text-xs">Exchange Rate</span>
+                      <span className="text-white text-sm">
+                        {getExchangeRateDisplay()}
+                      </span>
+                    </div>
+                  </div>
+                  
                   <div className="py-2">
                     <div className="text-gray-400 text-xs">No extra fees:</div>
                   </div>
@@ -939,7 +1084,7 @@ const Transactions = () => {
                 </div>
               ) : (
                 /* Buy/Sell Form */
-                <div className="space-y-4 flex-grow flex flex-col">
+                <div className="space-y-4 flex-grow flex flex-col overflow-y-auto">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center">
                       <div className="w-8 h-8 bg-gray-600 flex items-center justify-center rounded-full mr-3">
@@ -1062,19 +1207,19 @@ const Transactions = () => {
             </div>
             
             {/* My Portfolio */}
-            <div className="bg-[#121319] rounded-lg p-5 h-[468px] flex flex-col">
+            <div className="bg-[#121319] rounded-lg p-5 flex flex-col">
               <div className="mb-4">
                 <h2 className="text-white text-lg font-bold">My Portfolio</h2>
               </div>
               
               {/* Portfolio items */}
-              <div className="space-y-4 flex-grow overflow-auto">
+              <div className="overflow-y-auto max-h-[400px]">
                 {isLoading || portfolioStatus === 'loading' ? (
-                  <div className="flex-1 flex items-center justify-center">
+                  <div className="h-64 flex items-center justify-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
                   </div>
                 ) : portfolioStatus === 'failed' ? (
-                  <div className="flex-1 flex items-center justify-center text-red-500">
+                  <div className="h-64 flex items-center justify-center text-red-500">
                     <p>Portföy verileri alınırken bir hata oluştu: {portfolioError}</p>
                   </div>
                 ) : portfolioItems.length === 0 ? (
@@ -1088,25 +1233,27 @@ const Transactions = () => {
                     <p className="text-xs text-gray-500">Coin eklemek için Portfolio bölümünü kullanın</p>
                   </div>
                 ) : (
-                  portfolioItems.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center mr-3" style={{ backgroundColor: item.bgColor || getCoinColor(item.symbol) }}>
-                          <span className="text-white font-bold">{item.symbol.charAt(0).toUpperCase()}</span>
+                  <div className="space-y-4">
+                    {portfolioItems.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center mr-3" style={{ backgroundColor: item.bgColor || getCoinColor(item.symbol) }}>
+                            <span className="text-white font-bold">{item.symbol.charAt(0).toUpperCase()}</span>
+                          </div>
+                          <div>
+                            <h3 className="text-white font-medium text-base">{item.name}</h3>
+                            <p className="text-gray-400 text-xs">{item.price || '$0.00'}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="text-white font-medium text-base">{item.name}</h3>
-                          <p className="text-gray-400 text-xs">{item.price || '$0.00'}</p>
+                        <div className="text-right">
+                          <p className={item.isPositive ? 'text-green-500 text-xs' : 'text-red-500 text-xs'}>
+                            {item.isPositive ? '+' : '-'}{item.percentChange || '0.00%'}
+                          </p>
+                          <p className="text-white text-xs">{item.amount} {item.symbol}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className={item.isPositive ? 'text-green-500 text-xs' : 'text-red-500 text-xs'}>
-                          {item.isPositive ? '+' : '-'}{item.percentChange || '0.00%'}
-                        </p>
-                        <p className="text-white text-xs">{item.amount} {item.symbol}</p>
-                      </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
